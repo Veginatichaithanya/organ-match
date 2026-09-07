@@ -1,0 +1,109 @@
+# ==========================================
+# OrganMatch Comprehensive Git Ignore
+# ==========================================
+
+# 1. Environment & Secrets
+.env
+.env.*
+.env.local
+.env.development
+.env.production
+!.env.example
+*.env
+
+# 2. Python Environments & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.venv/
+venv/
+ENV/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# 3. Node.js & Frontend Builds
+node_modules/
+dist/
+dist-ssr/
+build/
+.eslintcache
+.prettiercache
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 4. Hyperledger Fabric Crypto, Keys & Artifacts
+# (Do NOT commit local/development private keys, certs, or binaries)
+**/organizations/peerOrganizations/**
+**/organizations/ordererOrganizations/**
+**/organizations/fabric-ca/ordererOrg/**
+**/organizations/fabric-ca/org1/**
+**/organizations/fabric-ca/org2/**
+**/channel-artifacts/**
+**/system-genesis-block/**
+**/ledgers/**
+**/ledgers-backup/**
+blockchain/test-network/bin/**
+blockchain/test-network/builders/**
+*.tar.gz
+*.block
+*.tx
+*.pb
+
+# Fabric & PQC Keys / Certificates
+.pqc_keys/
+*.key
+*_sk
+*.pem
+*.crt
+*.csr
+
+# Unrelated Fabric Sample Applications
+blockchain/test-network/asset-transfer-*
+blockchain/test-network/auction-*
+blockchain/test-network/full-stack-asset-transfer-guide/
+blockchain/test-network/hardware-security-module/
+blockchain/test-network/high-throughput/
+blockchain/test-network/off_chain_data/
+blockchain/test-network/test-application/
+blockchain/test-network/token-*
+blockchain/test-network/test-network-k8s/
+blockchain/test-network/test-network-nano-bash/
+blockchain/test-network/test-network/prometheus-grafana/
+blockchain/test-network/ci/
+
+# 5. Database & Local Runtime
+*.sql.bak
+*.dump
+*.backup
+postgres_data/
+
+# 6. IDEs & Machine Specific
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# 7. Logs & Temporary
+*.log
+log.txt
+scratch/
+tmp/
+temp/
+.gemini/
+

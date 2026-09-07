@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: organ_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-organ_donation_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - organ_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-organ_donation_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: organ_backend
+    user: root
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-organ_donation_db}}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-organ_donation_db}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-generate_a_secure_random_hex_key_for_production}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      - APP_ENV=${APP_ENV:-development}
+      - PQC_ENABLED=${PQC_ENABLED:-false}
+      - FABRIC_CERT_PATH=/fabric/org1/admin/msp/signcerts/cert.pem
+      - FABRIC_KEY_PATH=/fabric/org1/admin/msp/keystore/1f3d6e9a84e532b771410574f6709f16a98b12efa3be1dad7c85653b65e8db43_sk
+      - FABRIC_TLS_CERT_PATH=/fabric/org1/peer/tls/ca.crt
+      - FABRIC_MSP_ID=Org1MSP
+      - FABRIC_CHANNEL=organ-donation-channel
+      - FABRIC_CHAINCODE=organ-contract
+      - FABRIC_PEER_ENDPOINT=peer0.org1.example.com:7051
+      - FABRIC_GATEWAY_ENDPOINT=peer0.org1.example.com:7051
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./blockchain/test-network/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/fabric/org1/admin/msp:ro
+      - ./blockchain/test-network/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/fabric/org1/peer/tls:ro
+    networks:
+      - organ_network
+      - fabric_test
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+
+networks:
+  organ_network:
+    name: organ_network
+    driver: bridge
+  fabric_test:
+    name: fabric_test
+    external: true

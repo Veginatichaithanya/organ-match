@@ -1,0 +1,17 @@
+services:
+  postgres:
+    # Disable port exposure to host in production to protect database access
+    ports: []
+    restart: always
+
+  backend:
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    restart: always
+    environment:
+      - APP_ENV=production
+
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: always

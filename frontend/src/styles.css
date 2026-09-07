@@ -1,0 +1,203 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Design system — Secure Organ Donation Matching System.
+ * Google Workspace-inspired: white surfaces, light-gray fills,
+ * charcoal text, Google blue primary. Status colors only carry meaning.
+ * No gradients anywhere.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.278 0.008 264);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.278 0.008 264);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.278 0.008 264);
+  --primary: oklch(0.546 0.203 262.5);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.967 0.003 247);
+  --secondary-foreground: oklch(0.278 0.008 264);
+  --muted: oklch(0.967 0.003 247);
+  --muted-foreground: oklch(0.487 0.011 259);
+  --accent: oklch(0.951 0.026 255);
+  --accent-foreground: oklch(0.42 0.14 263);
+  --destructive: oklch(0.543 0.215 27.5);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.527 0.132 152.5);
+  --success-foreground: oklch(1 0 0);
+  --warning: oklch(0.72 0.157 74);
+  --warning-foreground: oklch(0.32 0.06 60);
+  --info: oklch(0.52 0.045 245);
+  --info-foreground: oklch(1 0 0);
+  --border: oklch(0.89 0.005 256);
+  --input: oklch(0.89 0.005 256);
+  --ring: oklch(0.546 0.203 262.5);
+  --chart-1: oklch(0.546 0.203 262.5);
+  --chart-2: oklch(0.527 0.132 152.5);
+  --chart-3: oklch(0.72 0.157 74);
+  --chart-4: oklch(0.543 0.215 27.5);
+  --chart-5: oklch(0.52 0.045 245);
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.278 0.008 264);
+  --sidebar-primary: oklch(0.546 0.203 262.5);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.951 0.026 255);
+  --sidebar-accent-foreground: oklch(0.42 0.14 263);
+  --sidebar-border: oklch(0.89 0.005 256);
+  --sidebar-ring: oklch(0.546 0.203 262.5);
+}
+
+.dark {
+  --background: oklch(0.21 0.01 264);
+  --foreground: oklch(0.94 0.005 256);
+  --card: oklch(0.25 0.012 264);
+  --card-foreground: oklch(0.94 0.005 256);
+  --popover: oklch(0.25 0.012 264);
+  --popover-foreground: oklch(0.94 0.005 256);
+  --primary: oklch(0.7 0.15 258);
+  --primary-foreground: oklch(0.21 0.01 264);
+  --secondary: oklch(0.29 0.014 262);
+  --secondary-foreground: oklch(0.94 0.005 256);
+  --muted: oklch(0.29 0.014 262);
+  --muted-foreground: oklch(0.7 0.015 258);
+  --accent: oklch(0.32 0.04 262);
+  --accent-foreground: oklch(0.85 0.08 258);
+  --destructive: oklch(0.63 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.66 0.15 152);
+  --success-foreground: oklch(0.15 0.02 152);
+  --warning: oklch(0.76 0.14 76);
+  --warning-foreground: oklch(0.25 0.05 70);
+  --info: oklch(0.68 0.06 245);
+  --info-foreground: oklch(0.15 0.02 245);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7 0.15 258);
+  --chart-1: oklch(0.7 0.15 258);
+  --chart-2: oklch(0.66 0.15 152);
+  --chart-3: oklch(0.76 0.14 76);
+  --chart-4: oklch(0.63 0.2 25);
+  --chart-5: oklch(0.68 0.06 245);
+  --sidebar: oklch(0.23 0.011 264);
+  --sidebar-foreground: oklch(0.94 0.005 256);
+  --sidebar-primary: oklch(0.7 0.15 258);
+  --sidebar-primary-foreground: oklch(0.21 0.01 264);
+  --sidebar-accent: oklch(0.32 0.04 262);
+  --sidebar-accent-foreground: oklch(0.85 0.08 258);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.7 0.15 258);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Landing page: restrained smooth scrolling + subtle reveal animations */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Thin, unobtrusive scrollbar for horizontal galleries */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* Hide scrollbars cleanly */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
