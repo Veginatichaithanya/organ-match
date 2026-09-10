@@ -55,7 +55,8 @@ COPY backend/ ./backend/
 
 # 3. Copy built Frontend bundles from builder
 COPY --from=frontend-builder /app/frontend/package*.json ./frontend/
-COPY --from=frontend-builder /app/frontend/.output ./frontend/.output
+COPY --from=frontend-builder /app/frontend/vite.config.ts ./frontend/
+COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
 
 # 4. Configure Nginx
