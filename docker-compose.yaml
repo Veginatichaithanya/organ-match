@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: organ_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-organ_donation_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-organmatch_secure_pass_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - organ_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-organ_donation_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: organ_backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-organmatch_secure_pass_2026}@postgres:5432/${POSTGRES_DB:-organ_donation_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-organmatch_secure_pass_2026}
+      - POSTGRES_DB=${POSTGRES_DB:-organ_donation_db}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-organmatch_secure_jwt_secret_key_2026_coolify}
+      - JWT_REFRESH_SECRET_KEY=${JWT_REFRESH_SECRET_KEY:-organmatch_secure_jwt_refresh_key_2026_coolify}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      - SEED_USER_PASSWORD=${SEED_USER_PASSWORD:-OrganMatch2026!}
+      - APP_ENV=${APP_ENV:-production}
+      - PQC_ENABLED=${PQC_ENABLED:-false}
+      - AUTO_SEED=${AUTO_SEED:-true}
+    networks:
+      - organ_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: organ_frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - VITE_BACKEND_URL=http://backend:8000
+    networks:
+      - organ_network
+    depends_on:
+      - backend
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: organ_nginx
+    restart: unless-stopped
+    expose:
+      - "80"
+    ports:
+      - "${PORT:-8080}:80"
+    networks:
+      - organ_network
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  organ_network:
+    name: organ_network
+    driver: bridge
