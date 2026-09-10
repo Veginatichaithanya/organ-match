@@ -38,11 +38,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Node.js binary and npm from Node official image
+# Copy Node.js binary and npm/npx from Node official image
 COPY --from=node:22-bookworm-slim /usr/local/include /usr/local/include
 COPY --from=node:22-bookworm-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
-RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && \
+    ln -s /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
 
 WORKDIR /app
 
@@ -53,14 +54,13 @@ RUN pip install --no-cache-dir -r ./backend/requirements.txt
 # 2. Copy Backend application source code
 COPY backend/ ./backend/
 
-# 3. Copy built Frontend bundles from builder
-COPY --from=frontend-builder /app/frontend/package*.json ./frontend/
-COPY --from=frontend-builder /app/frontend/vite.config.ts ./frontend/
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
+# 3. Copy built Frontend bundle and runtime from builder
+COPY --from=frontend-builder /app/frontend/ ./frontend/
 
-# 4. Configure Nginx
-RUN rm -rf /etc/nginx/conf.d/default.conf /etc/nginx/sites-enabled/* /var/www/html/*
+# 4. Configure Nginx and create fallback page
+RUN rm -rf /etc/nginx/conf.d/default.conf /etc/nginx/sites-enabled/* /var/www/html/* && \
+    mkdir -p /var/www/html && \
+    echo '<!DOCTYPE html><html><head><title>System Initializing</title><meta http-equiv="refresh" content="3"></head><body style="text-align:center;padding:50px;font-family:sans-serif;background:#0f172a;color:#fff;"><h2>OrganMatch Platform is initializing...</h2><p style="color:#94a3b8;">Services are booting up. This page will automatically refresh.</p></body></html>' > /var/www/html/50x.html
 COPY nginx/nginx-allinone.conf /etc/nginx/nginx.conf
 
 # 5. Configure Supervisor and Entrypoint

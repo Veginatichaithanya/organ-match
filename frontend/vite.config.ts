@@ -43,6 +43,7 @@ export default defineConfig({
   ],
   server: {
     host: "0.0.0.0",
+    allowedHosts: true,
     https: customHttpsConfig,
     port: 5173,
     proxy: {
@@ -52,6 +53,11 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  preview: {
+    host: "0.0.0.0",
+    port: 3000,
+    allowedHosts: true,
   },
 });
 
