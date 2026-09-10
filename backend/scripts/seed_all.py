@@ -159,7 +159,9 @@ def seed_users(session: Session, roles_map):
             session.add(user)
             print(f"[*] Seeded user: {u_data['username']}")
         else:
-            print(f"[-] User exists: {u_data['username']}")
+            existing.password_hash = default_hash
+            existing.status = "Active"
+            print(f"[*] Updated password for existing user: {u_data['username']}")
 
     session.commit()
 
