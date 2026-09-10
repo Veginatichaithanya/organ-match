@@ -413,6 +413,9 @@ async def admin_change_user_password(
         raise HTTPException(status_code=404, detail="User not found.")
 
     user.password_hash = get_password_hash(payload.new_password)
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.must_change_password = False
     user.updated_by = current_user.id
     await db.commit()
 

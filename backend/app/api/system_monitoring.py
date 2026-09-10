@@ -195,14 +195,18 @@ async def get_system_health(db: AsyncSession = Depends(get_db)):
     ]
 
     # Calculate overall system status according to policy:
-    # Critical core operational: PostgreSQL & Backend & Auth = HEALTHY
-    # If optional services (Docker / Fabric) are OFFLINE/NOT_CONFIGURED -> DEGRADED
-    # If core database is DOWN -> DOWN
-    if db_res["status"] != "HEALTHY":
+    # Critical services: PostgreSQL, Backend API, Auth — must all be HEALTHY for HEALTHY overall
+    # Optional services: Docker & Fabric — only degrade overall status if actively FAILING (OFFLINE)
+    # NOT_CONFIGURED / NOT_AVAILABLE means service is intentionally unused — not a degradation
+    # NOT_AVAILABLE (Docker not installed) → HEALTHY (infrastructure choice, not a failure)
+    # OFFLINE (configured + unreachable) → DEGRADED (active failure)
+    fabric_failing = fabric_data["status"] == "OFFLINE"  # configured but peer unreachable
+    docker_failing = docker_data["status"] == "OFFLINE"   # installed but daemon dead
+    core_healthy = db_res["status"] == "HEALTHY"
+
+    if not core_healthy:
         overall = "DOWN"
-    elif docker_data["status"] in ["HEALTHY", "AVAILABLE"] and fabric_data["status"] in ["HEALTHY", "CONNECTED"]:
-        overall = "HEALTHY"
-    elif docker_data["status"] in ["OFFLINE", "NOT_AVAILABLE"] or fabric_data["status"] in ["OFFLINE", "NOT_CONFIGURED", "DEGRADED"]:
+    elif fabric_failing or docker_failing:
         overall = "DEGRADED"
     else:
         overall = "HEALTHY"
@@ -355,7 +359,14 @@ async def get_system_services(db: AsyncSession = Depends(get_db)):
         ),
     ]
 
-    overall = "HEALTHY" if db_res["status"] == "HEALTHY" else "DOWN"
+    fabric_failing = fabric_data["status"] == "OFFLINE"
+    docker_failing = docker_data["status"] == "OFFLINE"
+    if db_res["status"] != "HEALTHY":
+        overall = "DOWN"
+    elif fabric_failing or docker_failing:
+        overall = "DEGRADED"
+    else:
+        overall = "HEALTHY"
 
     return ServicesMonitoringResponse(
         services=items,

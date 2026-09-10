@@ -29,8 +29,8 @@ ENV PATH="/venv/bin:$PATH"
 # Copy app code
 COPY . .
 
-# Ensure entrypoint is executable
-RUN chmod +x /app/entrypoint.sh
+# Ensure entrypoint has LF line endings and is executable
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Run container as a non-privileged system user
 RUN useradd -u 1001 -m appuser && \

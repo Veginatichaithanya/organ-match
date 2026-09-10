@@ -22,7 +22,8 @@ import app.models.organ
 import app.models.match
 import app.models.allocation
 import app.models.audit
-import app.models.security_event
+import app.models.medical_assessment
+import app.models.system_setting
 from app.models.hospital import Hospital
 from app.models.user import User, Role, Permission
 from app.security.authentication import get_password_hash

@@ -24,13 +24,16 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-# Copy package metadata, config, and built bundles
+# Copy package metadata, config, source files (required by TanStack Start router resolution), and built bundles
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/vite.config.ts ./
+COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/public ./public
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
 # Start production preview server (serves TanStack Start application on port 3000)
-CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["node", "node_modules/vite/bin/vite.js", "preview", "--host", "0.0.0.0", "--port", "3000"]

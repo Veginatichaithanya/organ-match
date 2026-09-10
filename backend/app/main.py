@@ -99,9 +99,10 @@ app.include_router(system_monitoring_router, prefix="/api")
 # --- Health check endpoints ---
 
 @app.get("/health")
+@app.get("/api/health")
 async def health_check():
     """
-    Standard service health check.
+    Standard service health check for orchestrators, Docker, and Coolify.
     """
     return {
         "status": "ok",

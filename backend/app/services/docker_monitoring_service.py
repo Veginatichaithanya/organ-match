@@ -25,28 +25,30 @@ class DockerMonitoringService:
 
         logger.info("[MONITORING] Starting real-time Docker runtime discovery...")
 
-        # 1. Attempt connection via Docker Python SDK across standard Windows and Unix endpoints
+        # 1. Attempt connection via Docker Python SDK
+        # On Windows + Docker Desktop (WSL2 backend), the active pipe is dockerDesktopLinuxEngine
         endpoints_to_try = [
-            None,  # from_env default
-            "npipe:////./pipe/docker_engine",
-            "tcp://127.0.0.1:2375",
+            None,                                           # from_env — reads DOCKER_HOST / active context
+            "npipe:////./pipe/dockerDesktopLinuxEngine",    # Docker Desktop WSL2 engine (Windows primary)
+            "npipe:////./pipe/docker_engine",               # Docker Desktop Hyper-V / legacy engine
+            "tcp://127.0.0.1:2375",                        # Unauthenticated TCP (legacy / rootless)
         ]
 
         try:
             import docker
             for ep in endpoints_to_try:
                 try:
-                    client = docker.DockerClient(base_url=ep, timeout=1.0) if ep else docker.from_env(timeout=1.0)
+                    client = docker.DockerClient(base_url=ep, timeout=1.5) if ep else docker.from_env(timeout=1.5)
                     if client.ping():
                         daemon_connected = True
-                        logger.info(f"[MONITORING] Docker SDK successfully connected via endpoint: {ep or 'from_env'}")
+                        logger.info(f"[MONITORING] Docker SDK connected via endpoint: {ep or 'from_env'}")
                         try:
                             ver_info = client.version()
                             docker_version = ver_info.get("Version", "Connected")
                         except Exception:
                             docker_version = "Connected"
 
-                        # Retrieve containers
+                        # Retrieve all containers
                         raw_containers = client.containers.list(all=True)
                         for c in raw_containers:
                             c_name = c.name.lstrip("/")
@@ -71,28 +73,26 @@ class DockerMonitoringService:
                             ))
                         break
                 except Exception as sdk_ep_err:
-                    logger.warning(f"[MONITORING] Docker endpoint '{ep or 'default'}' connection failed: {sdk_ep_err}")
+                    logger.debug(f"[MONITORING] Docker endpoint '{ep or 'default'}' failed: {sdk_ep_err}")
         except ImportError as imp_err:
-            logger.warning(f"[MONITORING] python docker package not imported: {imp_err}")
+            logger.warning(f"[MONITORING] python-docker package not imported: {imp_err}")
 
-
-        # 2. If SDK failed to reach daemon, test Docker CLI
+        # 2. If SDK failed, fall back to Docker CLI
         if not daemon_connected:
             try:
-                # Attempt to query server version via CLI
+                # Try server info (requires running daemon)
                 info_res = subprocess.run(
                     ["docker", "info", "--format", "{{.ServerVersion}}"],
-                    capture_output=True, text=True, timeout=1.5
+                    capture_output=True, text=True, timeout=3.0
                 )
                 if info_res.returncode == 0 and info_res.stdout.strip():
                     daemon_connected = True
                     docker_version = info_res.stdout.strip()
-                    logger.info(f"[MONITORING] Docker CLI successfully connected to daemon (v{docker_version})")
+                    logger.info(f"[MONITORING] Docker CLI daemon reachable (v{docker_version})")
 
-                    # Query all containers via CLI
                     ps_res = subprocess.run(
                         ["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}\t{{.RunningFor}}\t{{.State}}"],
-                        capture_output=True, text=True, timeout=1.5
+                        capture_output=True, text=True, timeout=3.0
                     )
                     if ps_res.returncode == 0 and ps_res.stdout.strip():
                         for line in ps_res.stdout.strip().splitlines():
@@ -114,42 +114,48 @@ class DockerMonitoringService:
                                 restart_count=0
                             ))
                 else:
-                    # Check if Docker client is installed even if daemon is stopped
+                    # Daemon not running; check if at least the CLI client is present
                     ver_res = subprocess.run(
                         ["docker", "version", "--format", "{{.Client.Version}}"],
-                        capture_output=True, text=True, timeout=1.5
+                        capture_output=True, text=True, timeout=3.0
                     )
                     client_ver = ver_res.stdout.strip()
                     if client_ver and re.match(r"^\d+\.\d+", client_ver):
                         docker_version = client_ver
                         status = "OFFLINE"
-                        message = f"Docker Desktop CLI is installed (v{client_ver}), but the engine daemon is currently stopped / offline"
-                        logger.warning(f"[MONITORING] Docker client v{client_ver} found, but engine daemon is offline.")
+                        message = (
+                            f"Docker Desktop CLI is installed (v{client_ver}), "
+                            "but the engine daemon is currently stopped. "
+                            "Please launch Docker Desktop to start the engine."
+                        )
+                        logger.warning(f"[MONITORING] Docker client v{client_ver} present but engine offline.")
                     else:
                         status = "OFFLINE"
-                        message = "Docker is installed on host, but the daemon is not running or socket is unreachable"
+                        message = "Docker engine daemon is not running or the socket is unreachable"
             except FileNotFoundError:
                 status = "NOT_AVAILABLE"
-                message = "Docker CLI and SDK are not installed in this environment"
-                logger.info("[MONITORING] Docker executable not found in host PATH.")
+                message = "Docker CLI is not installed in this environment"
+                logger.info("[MONITORING] Docker CLI not found in PATH.")
             except Exception as cli_err:
                 status = "OFFLINE"
-                message = f"Docker daemon unreachable: {str(cli_err)[:80]}"
+                message = f"Docker daemon unreachable: {str(cli_err)[:120]}"
                 logger.warning(f"[MONITORING] Docker CLI check error: {cli_err}")
 
-        # 3. Calculate status and counts
+        # 3. Compute final status and container counts
         running_count = sum(1 for c in containers if c.status in ["RUNNING", "RUNNING (HEALTHY)"])
         stopped_count = sum(1 for c in containers if c.status not in ["RUNNING", "RUNNING (HEALTHY)"])
         total_count = len(containers)
 
         if daemon_connected:
-            if running_count > 0 or total_count == 0:
+            if running_count > 0:
                 status = "HEALTHY"
-                message = f"Docker daemon connected successfully (v{docker_version})" if docker_version else "Docker daemon is running and reachable"
+                message = f"Docker daemon active (v{docker_version}) — {running_count} container(s) running"
+            elif total_count == 0:
+                status = "HEALTHY"
+                message = f"Docker daemon connected (v{docker_version}) — no containers deployed yet"
             else:
                 status = "DEGRADED"
-                message = "Docker daemon is connected, but containers are currently stopped"
-
+                message = f"Docker daemon connected (v{docker_version}) — {stopped_count} container(s) stopped"
 
         logger.info(
             f"[MONITORING] Docker check complete — Status: {status}, "

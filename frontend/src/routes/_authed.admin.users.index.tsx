@@ -7,6 +7,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   Filter,
   KeyRound,
   MoreVertical,
@@ -25,6 +27,8 @@ import { useAuth } from "@/lib/auth-context";
 import type { AdminUserDetail } from "@/services/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -223,7 +227,7 @@ function CreateUserModal({
   );
 }
 
-// ─── Reset Password Modal ──────────────────────────────────────────────────────
+// ─── Update / Reset Password Modal ─────────────────────────────────────────────
 
 function ResetPasswordModal({
   user,
@@ -232,72 +236,177 @@ function ResetPasswordModal({
   user: AdminUserDetail | null;
   onClose: () => void;
 }) {
-  const [result, setResult] = useState<{ temporary_password: string; message: string } | null>(null);
+  const qc = useQueryClient();
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => api.adminResetPassword(user!.id),
-    onSuccess: (data: any) => {
-      setResult(data);
+    mutationFn: (pwd: string) => api.adminChangePassword(user!.id, pwd),
+    onSuccess: () => {
+      setSuccess(true);
+      qc.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast.success(`Password for ${user?.username} updated successfully.`);
     },
     onError: (e: any) => {
-      setError(e?.response?.data?.detail ?? "Reset failed.");
+      setError(e?.response?.data?.detail ?? "Failed to update password.");
     },
   });
 
   const handleClose = () => {
-    setResult(null);
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
     setError("");
+    setSuccess(false);
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!newPassword || !confirmPassword) {
+      setError("Please enter and confirm the new password.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match. Please verify both fields.");
+      return;
+    }
+
+    mutation.mutate(newPassword);
   };
 
   return (
     <Dialog open={!!user} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-slate-900">Reset Password</DialogTitle>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-8 w-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
+              <KeyRound className="h-4 w-4" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-slate-900">Update Password</DialogTitle>
+          </div>
           <DialogDescription className="text-xs text-slate-500">
-            Generate a new temporary password for <strong>{user?.username}</strong>.
+            Enter a new password twice for user <strong>{user?.username}</strong>.
           </DialogDescription>
         </DialogHeader>
-        {!result ? (
-          <>
+
+        {!success ? (
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             {error && (
-              <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-medium text-rose-700">
-                {error}
+              <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2.5 text-xs font-medium text-rose-700 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
-            <p className="text-xs text-slate-600 py-2 leading-relaxed">
-              A new secure temporary password will be generated. The user will be required to update it upon next sign-in.
-            </p>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" size="sm" onClick={handleClose}>Cancel</Button>
-              <Button
-                id="confirm-reset-password"
-                size="sm"
-                variant="destructive"
-                onClick={() => mutation.mutate()}
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="admin-new-password" className="text-xs font-semibold text-slate-700">
+                  New Password
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium focus:outline-none"
+                >
+                  {showPassword ? (
+                    <>
+                      <EyeOff className="h-3 w-3" /> Hide
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-3 w-3" /> Show
+                    </>
+                  )}
+                </button>
+              </div>
+              <Input
+                id="admin-new-password"
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => {
+                  setNewPassword(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="Enter new password (min. 8 chars)"
+                className="text-xs"
+                autoComplete="new-password"
                 disabled={mutation.isPending}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="admin-confirm-password" className="text-xs font-semibold text-slate-700">
+                Confirm Password
+              </Label>
+              <Input
+                id="admin-confirm-password"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="Re-enter new password to confirm"
+                className="text-xs"
+                autoComplete="new-password"
+                disabled={mutation.isPending}
+              />
+              {confirmPassword && newPassword && confirmPassword !== newPassword && (
+                <p className="text-[11px] text-rose-600 font-medium">Passwords do not match.</p>
+              )}
+              {confirmPassword && newPassword && confirmPassword === newPassword && (
+                <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Passwords match
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 text-[11px] text-slate-600 leading-relaxed">
+              The user can immediately log in using this new password across all portals.
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={mutation.isPending}>
+                Cancel
+              </Button>
+              <Button
+                id="confirm-update-password"
+                type="submit"
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                disabled={mutation.isPending || !newPassword || !confirmPassword}
               >
-                {mutation.isPending ? "Generating…" : "Reset Password"}
+                {mutation.isPending ? "Updating…" : "Update Password"}
               </Button>
             </DialogFooter>
-          </>
+          </form>
         ) : (
-          <>
-            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4">
-              <p className="text-xs font-semibold text-emerald-900 mb-2">Temporary Password Generated</p>
-              <code className="block bg-white border border-emerald-200 rounded-lg px-3 py-2 text-xs font-mono font-bold text-slate-900 select-all">
-                {result.temporary_password}
-              </code>
-              <p className="text-[11px] text-emerald-700 mt-2">
-                Provide this key securely to the user. It will not be displayed again.
-              </p>
+          <div className="space-y-4 pt-2">
+            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 flex items-start gap-3">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-emerald-900">Password Updated Successfully</p>
+                <p className="text-xs text-emerald-700 mt-1">
+                  The password for user <strong>{user?.username}</strong> has been updated. They can now log in with their new password.
+                </p>
+              </div>
             </div>
             <DialogFooter>
-              <Button id="close-reset-success" size="sm" onClick={handleClose}>Done</Button>
+              <Button id="close-reset-success" size="sm" onClick={handleClose}>
+                Done
+              </Button>
             </DialogFooter>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
@@ -720,7 +829,7 @@ function AdminUsersPage() {
                               <UserCog className="h-3.5 w-3.5 mr-2 text-slate-500" /> Manage Roles
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => setResetUser(u)} className="text-xs">
-                              <KeyRound className="h-3.5 w-3.5 mr-2 text-slate-500" /> Reset Password
+                              <KeyRound className="h-3.5 w-3.5 mr-2 text-slate-500" /> Update Password
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {isActive ? (

@@ -66,7 +66,7 @@ COPY nginx/nginx-allinone.conf /etc/nginx/nginx.conf
 # 5. Configure Supervisor and Entrypoint
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY entrypoint-allinone.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 # Persistent storage for local PostgreSQL data
 VOLUME ["/var/lib/postgresql"]

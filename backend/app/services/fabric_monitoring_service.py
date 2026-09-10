@@ -131,7 +131,8 @@ class FabricMonitoringService:
         else:
             status = "OFFLINE"
             message = (
-                f"Fabric network is configured, but {peer_error_reason}"
+                f"Fabric network is configured (certs present), but the peer node at "
+                f"{peer_endpoint} is not running. Start the Fabric test-network to enable blockchain features."
                 if peer_error_reason
                 else f"Fabric network is configured, but peer endpoint ({peer_endpoint}) cannot currently be reached"
             )
