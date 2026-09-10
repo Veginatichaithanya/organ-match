@@ -27,6 +27,8 @@ if ASYNC_DATABASE_URL.startswith("postgresql+psycopg://"):
     ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
 elif ASYNC_DATABASE_URL.startswith("postgresql://"):
     ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif ASYNC_DATABASE_URL.startswith("postgres://"):
+    ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
 
 
@@ -48,7 +50,11 @@ async_session_maker = async_sessionmaker(
 # Convert async schema back to sync for standard library engines if necessary
 SYNC_DATABASE_URL = DATABASE_URL
 if SYNC_DATABASE_URL.startswith("postgresql+asyncpg://"):
-    SYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
+    SYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgresql+asyncpg://", "postgresql+psycopg://", 1)
+elif SYNC_DATABASE_URL.startswith("postgres://"):
+    SYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif SYNC_DATABASE_URL.startswith("postgresql://"):
+    SYNC_DATABASE_URL = SYNC_DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 sync_engine = create_engine(
     SYNC_DATABASE_URL,

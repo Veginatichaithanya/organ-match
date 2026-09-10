@@ -51,6 +51,8 @@ async def run_migrations_online() -> None:
         # Convert standard URL protocol to asyncpg for the migration engine if needed
         if db_url.startswith("postgresql://"):
             db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        elif db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
         configuration["sqlalchemy.url"] = db_url
 
     connectable = async_engine_from_config(
