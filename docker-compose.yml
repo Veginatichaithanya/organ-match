@@ -65,8 +65,10 @@ services:
       dockerfile: Dockerfile
     container_name: organ_nginx
     restart: unless-stopped
+    expose:
+      - "80"
     ports:
-      - "80:80"
+      - "${PORT:-8080}:80"
     networks:
       - organ_network
     depends_on:
