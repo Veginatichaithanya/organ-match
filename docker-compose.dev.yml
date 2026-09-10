@@ -13,19 +13,13 @@ services:
       - "8000:8000"
     environment:
       - APP_ENV=development
-      - DATABASE_URL=${DATABASE_URL}
-    develop:
-      watch:
-        - path: ./backend/app
-          action: sync
-          target: /app/app
-        - path: ./backend/tests
-          action: sync
-          target: /app/tests
+
+  frontend:
+    ports:
+      - "5173:3000"
+    environment:
+      - NODE_ENV=development
 
   nginx:
     ports:
-      - "8080:80" # Bind proxy to port 8080 during dev to prevent interference with local processes
-    volumes:
-      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
-
+      - "8080:80"

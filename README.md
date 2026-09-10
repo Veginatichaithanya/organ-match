@@ -4,35 +4,61 @@
 
 ---
 
-## Quick Start
+## Quick Start & Monorepo Deployment
 
-### Development Mode (Recommended)
+### 1. Coolify Monorepo Deployment (Zero-Error Single-Click)
 
-**Step 1 - Start Docker services (PostgreSQL + Backend + Nginx)**
-\\powershell
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
-\
-**Step 2 - Run database migrations**
-\\powershell
-docker compose -f docker-compose.yml -f docker-compose.dev.yml exec backend alembic upgrade head
-\
-**Step 3 - Start Frontend (separate terminal)**
-\\powershell
-cd frontend
-npm install
+This repository is pre-configured as a complete, self-contained Docker Compose monorepo for [Coolify](https://coolify.io).
+
+1. In your **Coolify Dashboard**, click **+ Create New Resource** -> **Docker Compose**.
+2. Connect your Git repository (select the `main` branch).
+3. Coolify will read [docker-compose.yml](docker-compose.yml), which automatically:
+   - Starts PostgreSQL 16 with health checking and persistent volume storage.
+   - Builds and boots the FastAPI backend, automatically applying all 13 database migrations and seeding initial hospital and admin records.
+   - Builds and boots the React/TanStack frontend.
+   - Starts the Nginx reverse proxy gateway.
+4. **Domain Routing**: In the Coolify service settings, assign your domain (e.g. `https://organmatch.yourdomain.com`) to the **`nginx`** service on port **`80`**. Coolify's Traefik reverse proxy will automatically issue an SSL certificate and route all traffic into the application.
+5. **Default Admin Login**:
+   - **Username**: `admin`
+   - **Password**: `OrganMatch2026!` (configurable via `SEED_USER_PASSWORD` in `.env`)
+
+---
+
+### 2. Single Command via Docker Compose (Local / VPS)
+
+Start all services (Database + Backend + Frontend + Nginx + Auto-Migration + Auto-Seed) in one command:
+
+```bash
+docker compose up --build
+```
+or using npm / make:
+```bash
+npm start
+# or
+make docker
+```
+
+Open:
+- **Web Application**: http://localhost (via Nginx on port 80)
+- **FastAPI Swagger Docs**: http://localhost/docs
+- **Health Check**: http://localhost/health
+
+---
+
+### 3. Native Local Development (Without Docker)
+
+Run both Backend and Frontend concurrently with live code reloading:
+
+```bash
+./run.sh
+# or
 npm run dev
-\
-**Step 4 - Open Application**
+# or
+make dev
+```
 
-| URL | Purpose |
-|-----|---------|
-| http://localhost:5173 | React frontend (Vite dev server) |
-| http://localhost:8000/docs | FastAPI Swagger UI |
-| http://localhost:8000/health | Backend health check |
-| http://localhost:8000/health/database | Database health check |
-| http://localhost:8000/health/blockchain | Fabric gateway status |
-
-> The Vite dev server proxies all /api/* requests to http://localhost:8000.
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000/docs
 
 ---
 

@@ -1,0 +1,28 @@
+# ==========================================
+# Hyperledger Fabric Overlay Configuration
+# Use this when running with a local Fabric network:
+# docker compose -f docker-compose.yml -f docker-compose.blockchain.yml up
+# ==========================================
+
+services:
+  backend:
+    environment:
+      - FABRIC_CERT_PATH=/fabric/org1/admin/msp/signcerts/cert.pem
+      - FABRIC_KEY_PATH=/fabric/org1/admin/msp/keystore/priv_sk
+      - FABRIC_TLS_CERT_PATH=/fabric/org1/peer/tls/ca.crt
+      - FABRIC_MSP_ID=Org1MSP
+      - FABRIC_CHANNEL=organ-donation-channel
+      - FABRIC_CHAINCODE=organ-contract
+      - FABRIC_PEER_ENDPOINT=peer0.org1.example.com:7051
+      - FABRIC_GATEWAY_ENDPOINT=peer0.org1.example.com:7051
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./blockchain/test-network/test-network/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp:/fabric/org1/admin/msp:ro
+      - ./blockchain/test-network/test-network/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls:/fabric/org1/peer/tls:ro
+    networks:
+      - fabric_test
+
+networks:
+  fabric_test:
+    name: fabric_test
+    external: true

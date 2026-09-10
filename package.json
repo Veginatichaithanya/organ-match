@@ -1,0 +1,26 @@
+{
+  "name": "organmatch-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Secure Organ Donation Matching and Tamper Detection System",
+  "scripts": {
+    "start": "docker compose up --build",
+    "start:detached": "docker compose up --build -d",
+    "stop": "docker compose down",
+    "dev": "./run.sh",
+    "dev:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build",
+    "build": "npm run build --prefix frontend",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && pytest tests",
+    "test:frontend": "npm run lint --prefix frontend"
+  },
+  "keywords": [
+    "organ-donation",
+    "healthcare",
+    "fastapi",
+    "react",
+    "vite",
+    "coolify",
+    "monorepo"
+  ]
+}
