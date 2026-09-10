@@ -21,6 +21,9 @@ if "@postgres:5432" in DATABASE_URL:
         DATABASE_URL = DATABASE_URL.replace("@postgres:5432", "@localhost:5432")
 
 
+import urllib.parse
+import ssl
+
 # Convert URL protocol for async operations using asyncpg driver
 ASYNC_DATABASE_URL = DATABASE_URL
 if ASYNC_DATABASE_URL.startswith("postgresql+psycopg://"):
@@ -30,14 +33,37 @@ elif ASYNC_DATABASE_URL.startswith("postgresql://"):
 elif ASYNC_DATABASE_URL.startswith("postgres://"):
     ASYNC_DATABASE_URL = ASYNC_DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
+# Extract and clean SSL query parameters for asyncpg compatibility
+parsed_async = urllib.parse.urlparse(ASYNC_DATABASE_URL)
+query_params = urllib.parse.parse_qs(parsed_async.query)
 
+sslmode = query_params.pop("sslmode", [None])[0]
+ssl_val = query_params.pop("ssl", [None])[0]
+ssl_requested = sslmode or ssl_val
+
+async_connect_args = {}
+if ssl_requested and ssl_requested.lower() not in ("disable", "false", "0", "no"):
+    # asyncpg expects an SSLContext or boolean, not 'sslmode'
+    # Use CERT_NONE to allow self-signed, private CA, and cloud-hosted certificates
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+    async_connect_args["ssl"] = ssl_ctx
+
+# Reconstruct clean URL without sslmode/ssl so SQLAlchemy dialect doesn't pass unexpected kwarg
+clean_query = urllib.parse.urlencode(
+    {k: v[0] if len(v) == 1 else v for k, v in query_params.items()},
+    doseq=True
+)
+ASYNC_DATABASE_URL = urllib.parse.urlunparse(parsed_async._replace(query=clean_query))
 
 # Asynchronous engine configuration for application routers
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
     pool_pre_ping=True,
     future=True,
-    echo=False
+    echo=False,
+    connect_args=async_connect_args
 )
 
 async_session_maker = async_sessionmaker(
