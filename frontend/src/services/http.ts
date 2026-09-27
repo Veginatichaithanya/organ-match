@@ -38,7 +38,11 @@ export class ApiError extends Error {
   }
 }
 
-const configuredBackendUrl = ((import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "") as string).trim();
+let rawBackendUrl = ((import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "") as string).trim();
+if (rawBackendUrl && !rawBackendUrl.startsWith("http://") && !rawBackendUrl.startsWith("https://") && !rawBackendUrl.startsWith("/")) {
+  rawBackendUrl = `https://${rawBackendUrl}`;
+}
+const configuredBackendUrl = rawBackendUrl;
 
 export const http = axios.create({
   baseURL: configuredBackendUrl

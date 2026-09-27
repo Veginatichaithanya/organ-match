@@ -63,4 +63,4 @@ echo " Backend Initialization Complete — Launching Server"
 echo "=================================================="
 
 # Start Uvicorn ASGI server
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000 "$@"
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}" "$@"
