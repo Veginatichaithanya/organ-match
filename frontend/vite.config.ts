@@ -27,7 +27,11 @@ const customHttpsConfig = hasCustomSsl
 // Enable HTTPS only if explicitly requested (HTTPS=true) with custom certificates or basicSsl
 const enableHttps = process.env.HTTPS === "true";
 
-let nitroBackendTarget = (process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "").trim();
+let nitroBackendTarget = (
+  process.env.BACKEND_URL ||
+  process.env.VITE_BACKEND_URL ||
+  "https://organmatch-backend-rwjz.onrender.com"
+).trim();
 if (nitroBackendTarget) {
   if (!nitroBackendTarget.includes(".") && !nitroBackendTarget.includes("localhost") && !nitroBackendTarget.startsWith("/")) {
     nitroBackendTarget = `${nitroBackendTarget}.onrender.com`;

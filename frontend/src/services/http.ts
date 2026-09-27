@@ -38,22 +38,10 @@ export class ApiError extends Error {
   }
 }
 
-let rawBackendUrl = ((import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "") as string).trim();
-if (rawBackendUrl) {
-  // If it's a bare Render service name (e.g. "organmatch-backend-rwjz"), append ".onrender.com"
-  if (!rawBackendUrl.includes(".") && !rawBackendUrl.includes("localhost") && !rawBackendUrl.startsWith("/")) {
-    rawBackendUrl = `${rawBackendUrl}.onrender.com`;
-  }
-  if (!rawBackendUrl.startsWith("http://") && !rawBackendUrl.startsWith("https://") && !rawBackendUrl.startsWith("/")) {
-    rawBackendUrl = `https://${rawBackendUrl}`;
-  }
-}
-const configuredBackendUrl = rawBackendUrl;
-
+// On browser, always use relative "/api" to route through Nitro/Vite/Nginx reverse proxy.
+// This ensures instant same-origin delivery without external DNS resolution delays or CORS preflights.
 export const http = axios.create({
-  baseURL: configuredBackendUrl
-    ? (configuredBackendUrl.endsWith("/api") ? configuredBackendUrl : `${configuredBackendUrl.replace(/\/+$/, "")}/api`)
-    : "/api",
+  baseURL: "/api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -66,15 +54,7 @@ let refreshPromise: Promise<string> | null = null;
 http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token && config.headers) {
-    const isAbsolute = config.url?.startsWith("http://") || config.url?.startsWith("https://");
-    const isInternal =
-      !isAbsolute ||
-      config.url?.includes("localhost:8000") ||
-      config.url?.includes("localhost:5173") ||
-      (configuredBackendUrl ? (config.url?.includes(configuredBackendUrl) || config.baseURL?.includes(configuredBackendUrl)) : false);
-    if (isInternal) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });

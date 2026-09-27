@@ -32,11 +32,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: 22.12.0
-      - key: VITE_BACKEND_URL
-        fromService:
-          type: web
-          name: organmatch-backend
-          property: host
+      - key: BACKEND_URL
+        value: https://organmatch-backend-rwjz.onrender.com
 
 databases:
   # ─── 3. PostgreSQL Database ─────────────────────────────────────────────────
