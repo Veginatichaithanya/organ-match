@@ -27,6 +27,16 @@ const customHttpsConfig = hasCustomSsl
 // Enable HTTPS only if explicitly requested (HTTPS=true) with custom certificates or basicSsl
 const enableHttps = process.env.HTTPS === "true";
 
+let nitroBackendTarget = (process.env.BACKEND_URL || process.env.VITE_BACKEND_URL || "").trim();
+if (nitroBackendTarget) {
+  if (!nitroBackendTarget.includes(".") && !nitroBackendTarget.includes("localhost") && !nitroBackendTarget.startsWith("/")) {
+    nitroBackendTarget = `${nitroBackendTarget}.onrender.com`;
+  }
+  if (!nitroBackendTarget.startsWith("http://") && !nitroBackendTarget.startsWith("https://")) {
+    nitroBackendTarget = `https://${nitroBackendTarget}`;
+  }
+}
+
 export default defineConfig({
   resolve: {
     alias: {
@@ -37,7 +47,15 @@ export default defineConfig({
     tanstackStart({
       server: { entry: "server" },
     }),
-    nitro(),
+    nitro({
+      routeRules: nitroBackendTarget
+        ? {
+            "/api/**": {
+              proxy: `${nitroBackendTarget.replace(/\/+$/, "")}/api/**`,
+            },
+          }
+        : undefined,
+    }),
     viteReact(),
     tailwindcss(),
     // Use basicSsl plugin only when HTTPS is explicitly enabled and no custom certificate is provided

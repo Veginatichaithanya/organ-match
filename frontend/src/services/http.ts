@@ -39,8 +39,14 @@ export class ApiError extends Error {
 }
 
 let rawBackendUrl = ((import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "") as string).trim();
-if (rawBackendUrl && !rawBackendUrl.startsWith("http://") && !rawBackendUrl.startsWith("https://") && !rawBackendUrl.startsWith("/")) {
-  rawBackendUrl = `https://${rawBackendUrl}`;
+if (rawBackendUrl) {
+  // If it's a bare Render service name (e.g. "organmatch-backend-rwjz"), append ".onrender.com"
+  if (!rawBackendUrl.includes(".") && !rawBackendUrl.includes("localhost") && !rawBackendUrl.startsWith("/")) {
+    rawBackendUrl = `${rawBackendUrl}.onrender.com`;
+  }
+  if (!rawBackendUrl.startsWith("http://") && !rawBackendUrl.startsWith("https://") && !rawBackendUrl.startsWith("/")) {
+    rawBackendUrl = `https://${rawBackendUrl}`;
+  }
 }
 const configuredBackendUrl = rawBackendUrl;
 
