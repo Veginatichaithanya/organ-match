@@ -982,7 +982,7 @@ async def review_match_by_doctor(
         existing_ass.clinical_notes = clinical_note
         existing_ass.recommendation = payload.recommendation
         existing_ass.reviewed_by = current_user.id
-        existing_ass.reviewed_at = datetime.now(timezone.utc)
+        existing_ass.reviewed_at = datetime.utcnow()
         await db.commit()
         await db.refresh(existing_ass)
         assessment = existing_ass
@@ -995,7 +995,7 @@ async def review_match_by_doctor(
             clinical_notes=clinical_note,
             recommendation=payload.recommendation,
             reviewed_by=current_user.id,
-            reviewed_at=datetime.now(timezone.utc),
+            reviewed_at=datetime.utcnow(),
         )
         db.add(assessment)
         await db.commit()

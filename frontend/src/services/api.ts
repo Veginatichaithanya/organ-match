@@ -133,10 +133,10 @@ export function normalizeBlockchainTx(raw: any): BlockchainTransaction {
     ""
   ).toString().trim().toUpperCase();
 
-  let canonicalStatus: "CONFIRMED" | "PENDING_VERIFICATION" | "FABRIC_OFFLINE" | "NOT_ANCHORED" | "TAMPERING_DETECTED";
+  let canonicalStatus: "VERIFIED" | "CONFIRMED" | "PENDING_VERIFICATION" | "FABRIC_OFFLINE" | "NOT_ANCHORED" | "TAMPERING_DETECTED";
 
   if (rawStatus === "CONFIRMED" || rawStatus === "VERIFIED" || rawStatus === "CONFIRMED_ON_LEDGER") {
-    canonicalStatus = "CONFIRMED";
+    canonicalStatus = "VERIFIED";
   } else if (rawStatus === "FABRIC_OFFLINE") {
     canonicalStatus = "FABRIC_OFFLINE";
   } else if (rawStatus === "NOT_ANCHORED") {
@@ -146,6 +146,12 @@ export function normalizeBlockchainTx(raw: any): BlockchainTransaction {
   } else {
     canonicalStatus = "PENDING_VERIFICATION";
   }
+
+  const fabricStateHash = raw.fabric_state_hash || raw.fabricStateHash || payloadHash || "";
+  const resolvedActor =
+    raw.actor === "44444444-4444-4444-4444-444444444444" || raw.actor === "transplant"
+      ? "Transplant Center"
+      : raw.actor || null;
 
   return {
     id: rowId,
@@ -158,20 +164,25 @@ export function normalizeBlockchainTx(raw: any): BlockchainTransaction {
     operation,
     payloadHash,
     payload_hash: payloadHash,
+    fabricStateHash,
+    fabric_state_hash: fabricStateHash,
+    computedHash: raw.computed_hash || null,
+    computed_hash: raw.computed_hash || null,
     channel,
     chaincode,
     status: dbStatus,
+    ledger_status: raw.ledger_status || dbStatus,
     blockNumber,                           // null = UNAVAILABLE
     block_number: blockNumber,
     createdAt,
     created_at: createdAt,
     confirmedAt,
     confirmed_at: confirmedAt,
-    actor,                                 // null = UNAVAILABLE
+    actor: resolvedActor,                  // null = UNAVAILABLE
     organization: raw.organization ?? null,
     record: `${recordType} (${recordId ? String(recordId).slice(0, 8) : "—"})`,
     timestamp: createdAt,
-    recordHash: payloadHash,
+    recordHash: fabricStateHash || payloadHash,
     previousHash,                          // null = UNAVAILABLE
     previous_hash: previousHash,
     blockHeight: blockNumber,              // null = UNAVAILABLE

@@ -1,4 +1,5 @@
 import sys
+import os
 import asyncio
 import uuid
 from datetime import datetime
@@ -48,16 +49,20 @@ app = FastAPI(
 )
 
 # CORS configuration
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
 allowed_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://localhost:8000"
 ]
+if env_origins:
+    allowed_origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"^https://.*\.onrender\.com$|^https://.*\.vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -5,6 +5,7 @@ from sqlalchemy.future import select
 from app.models.donor import Donor
 from app.models.recipient import Recipient
 from app.models.organ import Organ
+from app.models.match import Match
 from app.models.allocation import Allocation
 
 

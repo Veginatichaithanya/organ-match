@@ -38,8 +38,12 @@ export class ApiError extends Error {
   }
 }
 
+const configuredBackendUrl = ((import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || "") as string).trim();
+
 export const http = axios.create({
-  baseURL: "/api",
+  baseURL: configuredBackendUrl
+    ? (configuredBackendUrl.endsWith("/api") ? configuredBackendUrl : `${configuredBackendUrl.replace(/\/+$/, "")}/api`)
+    : "/api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -53,7 +57,11 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token && config.headers) {
     const isAbsolute = config.url?.startsWith("http://") || config.url?.startsWith("https://");
-    const isInternal = !isAbsolute || config.url?.includes("localhost:8000") || config.url?.includes("localhost:5173");
+    const isInternal =
+      !isAbsolute ||
+      config.url?.includes("localhost:8000") ||
+      config.url?.includes("localhost:5173") ||
+      (configuredBackendUrl ? (config.url?.includes(configuredBackendUrl) || config.baseURL?.includes(configuredBackendUrl)) : false);
     if (isInternal) {
       config.headers.Authorization = `Bearer ${token}`;
     }

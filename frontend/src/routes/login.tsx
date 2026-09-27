@@ -176,7 +176,7 @@ function LoginPage() {
           </div>
 
           {/* Login Form Card */}
-          <form onSubmit={handleSubmit} autoComplete="off" className="space-y-4 bg-slate-900/90 border border-slate-800 p-7 rounded-2xl shadow-2xl backdrop-blur-xl">
+          <form onSubmit={handleSubmit} action="#" method="POST" autoComplete="off" className="space-y-4 bg-slate-900/90 border border-slate-800 p-7 rounded-2xl shadow-2xl backdrop-blur-xl">
             {errorMsg && (
               <div className="rounded-lg bg-red-500/10 p-3.5 text-xs text-red-400 font-medium border border-red-500/20 flex items-center gap-2 animate-shake">
                 <ShieldCheck className="h-4 w-4 shrink-0 text-red-400" />

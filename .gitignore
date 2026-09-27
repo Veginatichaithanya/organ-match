@@ -32,6 +32,8 @@ node_modules/
 dist/
 dist-ssr/
 build/
+.output/
+.vercel/
 .eslintcache
 .prettiercache
 *.local
@@ -106,4 +108,6 @@ scratch/
 tmp/
 temp/
 .gemini/
+test-results/
+playwright-report/
 

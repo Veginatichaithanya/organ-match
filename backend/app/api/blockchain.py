@@ -100,6 +100,8 @@ async def list_transactions(
 
         v_status = "PENDING_VERIFICATION"
         actor_name = None
+        computed_hash = None
+        ledger_hash = None
 
         if is_fake_tx_id:
             v_status = "NOT_ANCHORED"
@@ -120,6 +122,7 @@ async def list_transactions(
                         "status": alloc.status,
                     }
                     computed_hash = hashlib.sha256(json.dumps(state_dict, sort_keys=True).encode("utf-8")).hexdigest()
+                    ledger_hash = None
                     try:
                         asset_str = await fabric_gateway.evaluate_transaction("GetAsset", str(tx.record_id))
                         if asset_str:
@@ -127,9 +130,20 @@ async def list_transactions(
                             ledger_hash = asset_data.get("state_hash")
                             actor_id = asset_data.get("actor_id")
                             if actor_id:
-                                actor_name = str(actor_id)
+                                if str(actor_id) == "44444444-4444-4444-4444-444444444444":
+                                    actor_name = "Transplant Center"
+                                else:
+                                    try:
+                                        u_res = await db.execute(select(User).where(User.id == uuid.UUID(str(actor_id))))
+                                        au = u_res.scalars().first()
+                                        if au:
+                                            actor_name = au.organization or ("Transplant Center" if "transplant" in (au.username or "") else au.username)
+                                        else:
+                                            actor_name = str(actor_id)
+                                    except Exception:
+                                        actor_name = str(actor_id)
                             if computed_hash == ledger_hash:
-                                v_status = "CONFIRMED"
+                                v_status = "VERIFIED"
                             else:
                                 v_status = "TAMPERING_DETECTED"
                         else:
@@ -142,7 +156,7 @@ async def list_transactions(
                             v_status = "NOT_ANCHORED"
             else:
                 if tx.status == "CONFIRMED":
-                    v_status = "CONFIRMED"
+                    v_status = "VERIFIED"
                 elif tx.status == "FAILED":
                     v_status = "NOT_ANCHORED"
                 else:
@@ -155,9 +169,12 @@ async def list_transactions(
             "record_type": tx.record_type,
             "operation": tx.operation,
             "payload_hash": tx.payload_hash,
+            "fabric_state_hash": ledger_hash if (ledger_hash is not None) else tx.payload_hash,
+            "computed_hash": computed_hash,
             "channel": tx.channel,
             "chaincode": tx.chaincode,
             "status": tx.status,
+            "ledger_status": tx.status,
             "created_by": str(tx.created_by),
             "created_at": tx.created_at.isoformat() if tx.created_at else None,
             "confirmed_at": tx.confirmed_at.isoformat() if tx.confirmed_at else None,
@@ -174,7 +191,12 @@ async def list_transactions(
     # Filter strictly by canonical verification status if requested
     raw_filter = (verification or verification_status or "").strip().upper()
     if raw_filter and raw_filter not in ["ALL", ""]:
-        enriched = [tx for tx in enriched if tx["verification_status"] == raw_filter]
+        if raw_filter == "VERIFIED":
+            enriched = [tx for tx in enriched if tx["verification_status"] in ["VERIFIED", "CONFIRMED"]]
+        elif raw_filter == "CONFIRMED":
+            enriched = [tx for tx in enriched if tx["verification_status"] in ["VERIFIED", "CONFIRMED"] or tx["status"] == "CONFIRMED"]
+        else:
+            enriched = [tx for tx in enriched if tx["verification_status"] == raw_filter]
 
     total_count = len(enriched)
     start_idx = (page - 1) * actual_page_size

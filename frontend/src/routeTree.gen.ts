@@ -29,6 +29,7 @@ import { Route as AuthedPermissionsIndexRouteImport } from './routes/_authed.per
 import { Route as AuthedRecipientsIndexRouteImport } from './routes/_authed.recipients.index'
 import { Route as AuthedRecipientsRecipientIdRouteImport } from './routes/_authed.recipients.$recipientId'
 import { Route as AuthedRecipientsNewRouteImport } from './routes/_authed.recipients.new'
+import { Route as AuthedReportsIndexRouteImport } from './routes/_authed.reports.index'
 import { Route as AuthedSecurityEventIdRouteImport } from './routes/_authed.security.$eventId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed.settings.index'
 import { Route as AuthedUsersIndexRouteImport } from './routes/_authed.users.index'
@@ -175,6 +176,11 @@ const AuthedRecipientsRecipientIdRoute =
 const AuthedRecipientsNewRoute = AuthedRecipientsNewRouteImport.update({
   id: '/recipients/new',
   path: '/recipients/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedReportsIndexRoute = AuthedReportsIndexRouteImport.update({
+  id: '/reports/',
+  path: '/reports/',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSecurityEventIdRoute = AuthedSecurityEventIdRouteImport.update({
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/organs/': typeof AuthedOrgansIndexRoute
   '/permissions/': typeof AuthedPermissionsIndexRoute
   '/recipients/': typeof AuthedRecipientsIndexRoute
+  '/reports/': typeof AuthedReportsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/users/': typeof AuthedUsersIndexRoute
   '/allocation/matches/$matchId': typeof AuthedAllocationMatchesMatchIdRoute
@@ -542,6 +549,7 @@ export interface FileRoutesByTo {
   '/organs': typeof AuthedOrgansIndexRoute
   '/permissions': typeof AuthedPermissionsIndexRoute
   '/recipients': typeof AuthedRecipientsIndexRoute
+  '/reports': typeof AuthedReportsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
   '/users': typeof AuthedUsersIndexRoute
   '/allocation/matches/$matchId': typeof AuthedAllocationMatchesMatchIdRoute
@@ -612,6 +620,7 @@ export interface FileRoutesById {
   '/_authed/organs/': typeof AuthedOrgansIndexRoute
   '/_authed/permissions/': typeof AuthedPermissionsIndexRoute
   '/_authed/recipients/': typeof AuthedRecipientsIndexRoute
+  '/_authed/reports/': typeof AuthedReportsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/users/': typeof AuthedUsersIndexRoute
   '/_authed/allocation/matches/$matchId': typeof AuthedAllocationMatchesMatchIdRoute
@@ -682,6 +691,7 @@ export interface FileRouteTypes {
     | '/organs/'
     | '/permissions/'
     | '/recipients/'
+    | '/reports/'
     | '/settings/'
     | '/users/'
     | '/allocation/matches/$matchId'
@@ -750,6 +760,7 @@ export interface FileRouteTypes {
     | '/organs'
     | '/permissions'
     | '/recipients'
+    | '/reports'
     | '/settings'
     | '/users'
     | '/allocation/matches/$matchId'
@@ -819,6 +830,7 @@ export interface FileRouteTypes {
     | '/_authed/organs/'
     | '/_authed/permissions/'
     | '/_authed/recipients/'
+    | '/_authed/reports/'
     | '/_authed/settings/'
     | '/_authed/users/'
     | '/_authed/allocation/matches/$matchId'
@@ -1013,6 +1025,13 @@ declare module '@tanstack/react-router' {
       path: '/recipients/new'
       fullPath: '/recipients/new'
       preLoaderRoute: typeof AuthedRecipientsNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/reports/': {
+      id: '/_authed/reports/'
+      path: '/reports'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof AuthedReportsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/security/$eventId': {
@@ -1366,6 +1385,7 @@ interface AuthedRouteChildren {
   AuthedOrgansIndexRoute: typeof AuthedOrgansIndexRoute
   AuthedPermissionsIndexRoute: typeof AuthedPermissionsIndexRoute
   AuthedRecipientsIndexRoute: typeof AuthedRecipientsIndexRoute
+  AuthedReportsIndexRoute: typeof AuthedReportsIndexRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
   AuthedUsersIndexRoute: typeof AuthedUsersIndexRoute
   AuthedAllocationMatchesMatchIdRoute: typeof AuthedAllocationMatchesMatchIdRoute
@@ -1433,6 +1453,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedOrgansIndexRoute: AuthedOrgansIndexRoute,
   AuthedPermissionsIndexRoute: AuthedPermissionsIndexRoute,
   AuthedRecipientsIndexRoute: AuthedRecipientsIndexRoute,
+  AuthedReportsIndexRoute: AuthedReportsIndexRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
   AuthedUsersIndexRoute: AuthedUsersIndexRoute,
   AuthedAllocationMatchesMatchIdRoute: AuthedAllocationMatchesMatchIdRoute,

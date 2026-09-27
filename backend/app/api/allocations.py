@@ -307,7 +307,7 @@ async def approve_allocation(
 
     # Allocate organ and recipient
     allocation.organ.status = "ALLOCATED"
-    allocation.recipient.status = "ALLOCATED"
+    allocation.recipient.status = "MATCHED"
     if allocation.match:
         allocation.match.status = "ACCEPTED"
 
@@ -324,7 +324,7 @@ async def approve_allocation(
         "match_id": str(allocation.match_id),
         "organ_id": str(allocation.organ_id),
         "recipient_id": str(allocation.recipient_id),
-        "status": allocation.status,
+        "status": "FABRIC_CONFIRMED",
     }
     state_hash = hashlib.sha256(json.dumps(state_dict, sort_keys=True).encode("utf-8")).hexdigest()
 
@@ -366,7 +366,19 @@ async def approve_allocation(
             allocation.status = "DATABASE_COMMITTED"
         
         await db.commit()
-        await db.refresh(allocation)
+        
+        # Reload with eager relationships to prevent MissingGreenlet during Pydantic response serialization
+        reload_q = (
+            select(Allocation)
+            .where(Allocation.id == allocation.id)
+            .options(
+                selectinload(Allocation.organ).selectinload(Organ.donor),
+                selectinload(Allocation.recipient),
+                selectinload(Allocation.match)
+            )
+        )
+        reload_res = await db.execute(reload_q)
+        allocation = reload_res.scalars().first()
 
     except Exception as e:
         allocation.status = "FABRIC_FAILED"
@@ -464,6 +476,17 @@ async def reject_allocation(
         allocation.match.status = "REJECTED"
 
     await db.commit()
-    await db.refresh(allocation)
+    
+    reload_q = (
+        select(Allocation)
+        .where(Allocation.id == allocation.id)
+        .options(
+            selectinload(Allocation.organ).selectinload(Organ.donor),
+            selectinload(Allocation.recipient),
+            selectinload(Allocation.match)
+        )
+    )
+    reload_res = await db.execute(reload_q)
+    allocation = reload_res.scalars().first()
 
     return allocation

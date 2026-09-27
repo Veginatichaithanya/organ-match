@@ -239,9 +239,14 @@ export interface BlockchainTransaction {
   previous_hash?: string | null;
   blockHeight?: number | null;        // null = UNAVAILABLE
   verification?: string;
-  verification_status?: string | null; // "CONFIRMED" | "PENDING_VERIFICATION" | "FABRIC_OFFLINE" | "NOT_ANCHORED" | "TAMPERING_DETECTED"
+  verification_status?: string | null; // "VERIFIED" | "CONFIRMED" | "PENDING_VERIFICATION" | "FABRIC_OFFLINE" | "NOT_ANCHORED" | "TAMPERING_DETECTED"
   fabricAnchorStatus?: string | null; // Canonical status alias
   fabric_anchor_status?: string | null;
+  fabricStateHash?: string | null;
+  fabric_state_hash?: string | null;
+  computedHash?: string | null;
+  computed_hash?: string | null;
+  ledger_status?: string | null;
 }
 
 

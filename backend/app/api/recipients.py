@@ -26,6 +26,15 @@ async def create_recipient(
     """
     Register a new recipient on the waiting list. Validates boundaries (ABAC).
     """
+    # RBAC first — unauthorized roles get 403 before payload validation fires.
+    AuthorizationService.authorize(
+        user=current_user,
+        permission_name="CREATE_RECIPIENT",
+        resource_type="Recipient",
+        operation="CREATE",
+        resource={"hospital_id": payload.hospital_id or current_user.hospital_id}
+    )
+
     role_name = current_user.roles[0].name if current_user.roles else ""
     if role_name == "HOSPITAL_COORDINATOR":
         if not current_user.hospital_id:
@@ -50,15 +59,6 @@ async def create_recipient(
     payload_dict = payload.model_dump()
     payload_dict["recipient_code"] = recipient_code
     payload_dict["hospital_id"] = effective_hospital_id
-
-    # Evaluate permissions and context policies (ABAC)
-    AuthorizationService.authorize(
-        user=current_user,
-        permission_name="CREATE_RECIPIENT",
-        resource_type="Recipient",
-        operation="CREATE",
-        resource=payload_dict
-    )
 
     # For Hospital Coordinator, force effective_hospital_id to caller's hospital_id
     if role_name == "HOSPITAL_COORDINATOR":

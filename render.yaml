@@ -1,0 +1,44 @@
+services:
+  # ─── 1. FastAPI Python Backend ──────────────────────────────────────────────
+  - type: web
+    name: organmatch-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: "pip install -r requirements.txt && alembic upgrade head && python scripts/seed_all.py"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: organmatch-db
+          property: connectionString
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_REFRESH_SECRET_KEY
+        generateValue: true
+
+  # ─── 2. React / TanStack Start Frontend ─────────────────────────────────────
+  - type: web
+    name: organmatch-frontend
+    runtime: node
+    rootDir: frontend
+    plan: free
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm run start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_BACKEND_URL
+        fromService:
+          type: web
+          name: organmatch-backend
+          property: host
+
+databases:
+  # ─── 3. PostgreSQL Database ─────────────────────────────────────────────────
+  - name: organmatch-db
+    databaseName: organmatch
+    user: organmatch_user
+    plan: free

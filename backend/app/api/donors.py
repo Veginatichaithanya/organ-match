@@ -28,6 +28,17 @@ async def create_donor(
     """
     Register a new donor. Validates organization boundaries (ABAC) and registration requirements.
     """
+    # RBAC check first — unauthorized roles get 403 before any payload validation fires.
+    # We pass a minimal resource dict here; ABAC context will be re-evaluated below with the
+    # full hospital-resolved payload once we confirm the caller has the base permission at all.
+    AuthorizationService.authorize(
+        user=current_user,
+        permission_name="CREATE_DONOR",
+        resource_type="Donor",
+        operation="CREATE",
+        resource={"hospital_id": payload.hospital_id or current_user.hospital_id}
+    )
+
     role_name = current_user.roles[0].name if current_user.roles else ""
     if role_name == "HOSPITAL_COORDINATOR":
         if not current_user.hospital_id:
@@ -52,15 +63,6 @@ async def create_donor(
     payload_dict = payload.model_dump()
     payload_dict["donor_code"] = donor_code
     payload_dict["hospital_id"] = payload.hospital_id or effective_hospital_id
-
-    # Evaluate permissions and context policies (raises ABACDeniedError with ABAC_VIOLATION if hospital mismatch)
-    AuthorizationService.authorize(
-        user=current_user,
-        permission_name="CREATE_DONOR",
-        resource_type="Donor",
-        operation="CREATE",
-        resource=payload_dict
-    )
 
     # For Hospital Coordinator, force effective_hospital_id to caller's hospital_id
     if role_name == "HOSPITAL_COORDINATOR":

@@ -11,9 +11,11 @@ import {
   ClipboardCheck,
   ClipboardList,
   Clock,
+  FileText,
   HeartHandshake,
   KeyRound,
   LayoutDashboard,
+  Link2,
   LogOut,
   Menu,
   MoreVertical,
@@ -79,6 +81,7 @@ const ALLOCATION_NAV_ITEMS = [
   { to: "/allocation/matches", label: "Match Reviews", icon: Shuffle },
   { to: "/allocation/queue", label: "Allocation Queue", icon: ClipboardCheck },
   { to: "/allocations", label: "Approved Allocations", icon: CheckCircle2 },
+  { to: "/blockchain", label: "Blockchain Ledger", icon: Link2 },
   { to: "/allocation/history", label: "Allocation History", icon: Clock },
 ] as const;
 
@@ -197,6 +200,50 @@ function NavLinks({
 
         return linkContent;
       })}
+
+      {isAllocation && (
+        <>
+          {!isCollapsed && (
+            <div className="mt-3 px-3.5 pt-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+              OTHER
+            </div>
+          )}
+          <Link
+            to="/reports"
+            onClick={onNavigate}
+            activeProps={{
+              className:
+                "bg-primary/10 text-primary font-semibold border border-primary/30 shadow-2xs",
+            }}
+            className={cn(
+              "flex items-center gap-3 rounded-lg text-sm transition-all duration-150 border border-transparent hover:border-gray-200 hover:bg-muted/70 hover:text-foreground",
+              isCollapsed
+                ? "h-10 w-10 justify-center p-0 mx-auto"
+                : "px-3.5 py-2.5 text-foreground/80 font-medium"
+            )}
+          >
+            <FileText className="h-[18px] w-[18px] shrink-0 text-primary/80" />
+            {!isCollapsed && <span className="truncate">Reports</span>}
+          </Link>
+          <Link
+            to="/settings"
+            onClick={onNavigate}
+            activeProps={{
+              className:
+                "bg-primary/10 text-primary font-semibold border border-primary/30 shadow-2xs",
+            }}
+            className={cn(
+              "flex items-center gap-3 rounded-lg text-sm transition-all duration-150 border border-transparent hover:border-gray-200 hover:bg-muted/70 hover:text-foreground",
+              isCollapsed
+                ? "h-10 w-10 justify-center p-0 mx-auto"
+                : "px-3.5 py-2.5 text-foreground/80 font-medium"
+            )}
+          >
+            <Settings className="h-[18px] w-[18px] shrink-0 text-primary/80" />
+            {!isCollapsed && <span className="truncate">Settings</span>}
+          </Link>
+        </>
+      )}
     </nav>
   );
 }
