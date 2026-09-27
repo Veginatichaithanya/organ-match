@@ -27,11 +27,11 @@ services:
     runtime: node
     rootDir: frontend
     plan: free
-    buildCommand: "npm install && npm run build"
+    buildCommand: "npm install --include=dev && npm run build"
     startCommand: "npm run start"
     envVars:
-      - key: NODE_ENV
-        value: production
+      - key: NODE_VERSION
+        value: 22.12.0
       - key: VITE_BACKEND_URL
         fromService:
           type: web
