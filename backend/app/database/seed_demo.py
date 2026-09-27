@@ -24,6 +24,8 @@ from app.models.donor import Donor
 from app.models.organ import Organ
 from app.models.recipient import Recipient
 from app.models.match import Match
+from app.models.allocation import Allocation
+from app.models.blockchain_transaction import BlockchainTransaction
 from app.models.medical_assessment import MedicalAssessment
 from app.services.matching_service import MatchingService
 from app.security.authentication import hash_password
@@ -387,6 +389,56 @@ async def seed_demo_data():
                     reviewed_by=doctor_user.id,
                     reviewed_at=datetime.utcnow() - timedelta(hours=2),
                 ))
+
+        # 7. Seed completed demonstration allocation and blockchain anchor if not exists
+        existing_alloc = (await session.execute(select(Allocation).limit(1))).scalars().first()
+        if not existing_alloc:
+            top_match = (await session.execute(select(Match).order_by(Match.composite_score.desc()).limit(1))).scalars().first()
+            if top_match:
+                auth_user = (await session.execute(select(User).where(User.username == "transplant"))).scalars().first()
+                auth_id = auth_user.id if auth_user else doctor_user.id
+
+                alloc_id = uuid.uuid4()
+                import json
+                import hashlib
+                state_dict = {
+                    "id": str(alloc_id),
+                    "match_id": str(top_match.id),
+                    "organ_id": str(top_match.organ_id),
+                    "recipient_id": str(top_match.recipient_id),
+                    "status": "APPROVED",
+                }
+                state_hash = hashlib.sha256(json.dumps(state_dict, sort_keys=True).encode("utf-8")).hexdigest()
+                demo_tx_id = hashlib.sha256(f"FABRIC_TX_{alloc_id}".encode("utf-8")).hexdigest()
+
+                new_alloc = Allocation(
+                    id=alloc_id,
+                    match_id=top_match.id,
+                    organ_id=top_match.organ_id,
+                    recipient_id=top_match.recipient_id,
+                    status="APPROVED",
+                    approved_by=auth_id,
+                    fabric_tx_id=demo_tx_id,
+                    created_by=auth_id,
+                    updated_by=auth_id,
+                )
+                session.add(new_alloc)
+                await session.flush()
+
+                tx_obj = BlockchainTransaction(
+                    fabric_tx_id=demo_tx_id,
+                    record_id=new_alloc.id,
+                    record_type="Allocation",
+                    operation="ApproveAllocation",
+                    payload_hash=state_hash,
+                    channel="organ-donation-channel",
+                    chaincode="organ-contract",
+                    status="CONFIRMED",
+                    created_by=auth_id,
+                    confirmed_at=datetime.utcnow(),
+                )
+                session.add(tx_obj)
+                print("[*] Seeded demonstration approved allocation and blockchain anchor transaction.")
 
         await session.commit()
         print("Demo data seeded successfully for Hospital A.")
