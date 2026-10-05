@@ -48,22 +48,29 @@ function getBackendBaseUrl(): string {
   let raw = (
     process.env.BACKEND_URL ||
     process.env.VITE_BACKEND_URL ||
-    (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://organmatch-backend-rwjz.onrender.com")
+    // Render free tier does NOT support internal networking — always use public HTTPS URL
+    (process.env.NODE_ENV === "development"
+      ? "http://localhost:8000"
+      : "https://organmatch-backend-rwjz.onrender.com")
   ).trim();
 
-  // If hostport or bare service format
+  // If a bare hostname or hostport was injected (e.g. Render blueprint fromService.hostport),
+  // normalise it to a full URL.
   if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
     if (raw.includes("localhost") || raw.includes("127.0.0.1")) {
       raw = `http://${raw}`;
-    } else if (raw.includes("organmatch-backend") || raw.includes("10000")) {
-      raw = "https://organmatch-backend-rwjz.onrender.com";
     } else {
-      raw = `https://${raw}.onrender.com`;
+      // Any external hostname → force HTTPS
+      raw = `https://${raw}`;
     }
   }
 
-  // If set to internal Render hostport (organmatch-backend:10000) which fails on free tier:
-  if (raw === "http://organmatch-backend:10000" || raw.includes("organmatch-backend:10000")) {
+  // If the env var accidentally points to the internal Render service name
+  // (only available on paid private networking plans), fall back to public URL.
+  if (
+    raw.includes("organmatch-backend:10000") ||
+    raw === "http://organmatch-backend:10000"
+  ) {
     raw = "https://organmatch-backend-rwjz.onrender.com";
   }
 

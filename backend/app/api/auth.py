@@ -79,8 +79,6 @@ async def login(
         .where(
             (func.lower(User.username) == cleaned_id.lower())
             | (func.lower(User.email) == cleaned_id.lower())
-            | (User.username == cleaned_id)
-            | (User.email == cleaned_id)
         )
         .options(
             selectinload(User.hospital),
