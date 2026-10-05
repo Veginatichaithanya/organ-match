@@ -83,9 +83,11 @@ async function handleApiProxy(request: Request, url: URL): Promise<Response> {
 
   const forwardHeaders = new Headers();
   for (const [key, value] of request.headers.entries()) {
-    if (key.toLowerCase() !== "host") {
-      forwardHeaders.set(key, value);
+    const k = key.toLowerCase();
+    if (k === "host" || k === "connection" || k === "content-length") {
+      continue;
     }
+    forwardHeaders.set(key, value);
   }
 
   const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip");
@@ -107,9 +109,26 @@ async function handleApiProxy(request: Request, url: URL): Promise<Response> {
       redirect: "manual",
     });
 
+    // Hop-by-hop and encoding/length headers that MUST NOT be forwarded from upstream.
+    // In particular:
+    // - content-encoding: Node fetch() transparently decompresses brotli/gzip responses.
+    // - content-length: upstream was the compressed/chunked size, NOT the decompressed body size.
+    // Forwarding either header causes the browser / CDN to truncate or fail to parse JSON.
+    const STRIP_RESPONSE_HEADERS = new Set([
+      "content-length",
+      "content-encoding",
+      "transfer-encoding",
+      "connection",
+      "keep-alive",
+      "public-key-pins",
+      "upgrade",
+      "trailer",
+      "set-cookie", // Set-Cookie headers are preserved individually below
+    ]);
+
     const responseHeaders = new Headers();
     for (const [key, value] of backendRes.headers.entries()) {
-      if (key.toLowerCase() === "set-cookie") {
+      if (STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
         continue;
       }
       responseHeaders.set(key, value);
@@ -128,7 +147,12 @@ async function handleApiProxy(request: Request, url: URL): Promise<Response> {
       }
     }
 
-    return new Response(backendRes.body, {
+    // Safely buffer the body as an ArrayBuffer to avoid stream piping / truncation issues
+    const responseBody = [204, 304].includes(backendRes.status)
+      ? null
+      : await backendRes.arrayBuffer();
+
+    return new Response(responseBody, {
       status: backendRes.status,
       statusText: backendRes.statusText,
       headers: responseHeaders,
