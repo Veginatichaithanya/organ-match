@@ -17,10 +17,8 @@ import {
   Shield,
   ShieldOff,
   ShieldCheck,
-  UserCog,
   Users,
   X,
-  XCircle,
 } from "lucide-react";
 import { api } from "@/services/api";
 import { useAuth } from "@/lib/auth-context";
@@ -413,107 +411,6 @@ function ResetPasswordModal({
   );
 }
 
-// ─── Assign Role Modal ─────────────────────────────────────────────────────────
-
-function AssignRoleModal({
-  user,
-  onClose,
-}: {
-  user: AdminUserDetail | null;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState(ROLES[0]);
-  const [error, setError] = useState("");
-
-  const assignMutation = useMutation({
-    mutationFn: () => api.adminAssignRole(user!.id, selectedRole),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "users"] });
-      onClose();
-    },
-    onError: (e: any) => setError(e?.response?.data?.detail ?? "Failed to assign role."),
-  });
-
-  const removeMutation = useMutation({
-    mutationFn: (roleName: string) => api.adminRemoveRole(user!.id, roleName),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["admin", "users"] }),
-    onError: (e: any) => setError(e?.response?.data?.detail ?? "Failed to remove role."),
-  });
-
-  return (
-    <Dialog open={!!user} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="text-lg font-bold text-slate-900">Manage Roles</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
-            Assign or remove system roles for <strong>{user?.username}</strong>.
-          </DialogDescription>
-        </DialogHeader>
-
-        {error && (
-          <div className="rounded-lg bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-medium text-rose-700">
-            {error}
-          </div>
-        )}
-
-        <div className="py-1 space-y-3">
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Assigned Roles</p>
-            {user?.roles.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No roles assigned.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {user?.roles.map((r) => (
-                  <div key={r.id} className="flex items-center gap-1.5 rounded-md bg-slate-100 border border-slate-200 px-2.5 py-1 text-xs">
-                    <span className="font-semibold text-slate-700">{r.name}</span>
-                    <button
-                      className="text-slate-400 hover:text-rose-600 transition-colors"
-                      onClick={() => removeMutation.mutate(r.name)}
-                      title={`Remove ${r.name}`}
-                    >
-                      <XCircle className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Assign New Role</p>
-            <div className="flex gap-2">
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger id="assign-role-select" className="flex-1 h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((r) => (
-                    <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                id="assign-role-submit"
-                size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => assignMutation.mutate()}
-                disabled={assignMutation.isPending}
-              >
-                Assign
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ─── Deactivate Confirm Modal ──────────────────────────────────────────────────
 
 function StatusConfirmModal({
@@ -583,7 +480,6 @@ function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [resetUser, setResetUser] = useState<AdminUserDetail | null>(null);
-  const [roleUser, setRoleUser] = useState<AdminUserDetail | null>(null);
   const [statusModal, setStatusModal] = useState<{ user: AdminUserDetail; target: string } | null>(null);
   const [page, setPage] = useState(1);
 
@@ -600,7 +496,8 @@ function AdminUsersPage() {
     enabled: ready && !!user,
   });
 
-  const filtered = (users ?? []).filter((u) => {
+  const rawUsers: AdminUserDetail[] = Array.isArray(users) ? users : ((users as any)?.items || []);
+  const filtered = rawUsers.filter((u) => {
     const q = search.toLowerCase();
     const matchSearch =
       !q ||
@@ -825,9 +722,7 @@ function AdminUsersPage() {
                           <DropdownMenuContent align="end" className="w-44">
                             <DropdownMenuLabel className="text-xs text-slate-500">Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setRoleUser(u)} className="text-xs">
-                              <UserCog className="h-3.5 w-3.5 mr-2 text-slate-500" /> Manage Roles
-                            </DropdownMenuItem>
+
                             <DropdownMenuItem onClick={() => setResetUser(u)} className="text-xs">
                               <KeyRound className="h-3.5 w-3.5 mr-2 text-slate-500" /> Update Password
                             </DropdownMenuItem>
@@ -861,7 +756,7 @@ function AdminUsersPage() {
         {/* Footer & Pagination Bar */}
         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50/40">
           <p className="text-xs text-slate-500 font-medium">
-            Showing {filtered.length} of {users?.length ?? 0} users
+            Showing {filtered.length} of {rawUsers.length} users
           </p>
 
           <div className="flex items-center gap-1">
@@ -898,7 +793,6 @@ function AdminUsersPage() {
         hospitals={(hospitals ?? []).map((h) => ({ id: h.id, name: h.name }))}
       />
       <ResetPasswordModal user={resetUser} onClose={() => setResetUser(null)} />
-      <AssignRoleModal user={roleUser} onClose={() => setRoleUser(null)} />
       <StatusConfirmModal
         user={statusModal?.user ?? null}
         targetStatus={statusModal?.target ?? "Active"}

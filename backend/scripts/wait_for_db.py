@@ -10,7 +10,7 @@ def wait_for_postgres(max_retries=30, retry_interval=2):
 
     if db_url and "@" in db_url:
         try:
-            netloc = db_url.split("@")[-1].split("/")[0]
+            netloc = db_url.split("@")[-1].split("/")[0].split("?")[0]
             if ":" in netloc:
                 host, p = netloc.split(":")
                 port = int(p)

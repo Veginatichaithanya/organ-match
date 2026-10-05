@@ -111,7 +111,7 @@ function AllocationsPage() {
         <ErrorState
           message={error instanceof Error ? error.message : "Failed to load allocations."}
         />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState
           title={status === "Approved" ? "No approved allocations found." : "No allocations found."}
           description="There are currently no allocations matching the selected criteria."

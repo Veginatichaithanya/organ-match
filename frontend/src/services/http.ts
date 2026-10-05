@@ -62,7 +62,47 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 http.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as AxiosRequestConfig & {
+      _retry?: boolean;
+      _gatewayRetry?: boolean;
+      _rateLimitRetry?: boolean;
+    };
+
+    // ── 429 Rate Limit: auto-retry after Retry-After delay (Render platform throttle) ──
+    if (error.response?.status === 429 && originalRequest && !originalRequest._rateLimitRetry) {
+      originalRequest._rateLimitRetry = true;
+      // Honour the Retry-After header (in seconds), fallback to 65s for Render's free tier window
+      const retryAfterHeader = error.response.headers?.["retry-after"];
+      const retryAfterSec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 65;
+      const waitMs = (isNaN(retryAfterSec) ? 65 : retryAfterSec) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      return http(originalRequest);
+    }
+
+    // ── 429 with no auto-retry (second hit): surface a clear user message ──
+    if (error.response?.status === 429) {
+      const retryAfterHeader = error.response.headers?.["retry-after"];
+      const retrySec = retryAfterHeader ? parseInt(retryAfterHeader, 10) : 60;
+      const waitStr = isNaN(retrySec) ? "a minute" : `${retrySec} second${retrySec !== 1 ? "s" : ""}`;
+      return Promise.reject(
+        new ApiError(
+          429,
+          `Too many requests. The server is rate-limiting this IP. Please wait ${waitStr} and try again.`,
+          "RATE_LIMITED"
+        )
+      );
+    }
+
+    // Automatic transparent retry on 502/503/504 gateway spin-up delays (e.g. Render free tier cold start)
+    if (
+      (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) &&
+      originalRequest &&
+      !originalRequest._gatewayRetry
+    ) {
+      originalRequest._gatewayRetry = true;
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+      return http(originalRequest);
+    }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (originalRequest.url?.includes("/auth/login") || originalRequest.url?.includes("/auth/refresh")) {
@@ -100,11 +140,17 @@ http.interceptors.response.use(
     }
 
     const status = error.response?.status || 500;
-    const detail =
+    let detail =
       error.response?.data?.detail ||
-      error.response?.data?.error?.message ||
-      error.message ||
-      "An unexpected error occurred.";
+      error.response?.data?.error?.message;
+
+    if (!detail) {
+      if (status === 502 || status === 503 || status === 504) {
+        detail = `Backend server is spinning up from cold sleep (HTTP ${status}). Please allow 30–60 seconds and try again.`;
+      } else {
+        detail = error.message || "An unexpected error occurred.";
+      }
+    }
     const code = error.response?.data?.error?.code;
 
     return Promise.reject(new ApiError(status, detail, code));

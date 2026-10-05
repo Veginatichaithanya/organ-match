@@ -44,9 +44,115 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+function getBackendBaseUrl(): string {
+  let raw = (
+    process.env.BACKEND_URL ||
+    process.env.VITE_BACKEND_URL ||
+    (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://organmatch-backend-rwjz.onrender.com")
+  ).trim();
+
+  // If hostport or bare service format
+  if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
+    if (raw.includes("localhost") || raw.includes("127.0.0.1")) {
+      raw = `http://${raw}`;
+    } else if (raw.includes("organmatch-backend") || raw.includes("10000")) {
+      raw = "https://organmatch-backend-rwjz.onrender.com";
+    } else {
+      raw = `https://${raw}.onrender.com`;
+    }
+  }
+
+  // If set to internal Render hostport (organmatch-backend:10000) which fails on free tier:
+  if (raw === "http://organmatch-backend:10000" || raw.includes("organmatch-backend:10000")) {
+    raw = "https://organmatch-backend-rwjz.onrender.com";
+  }
+
+  return raw.replace(/\/+$/, "");
+}
+
+async function handleApiProxy(request: Request, url: URL): Promise<Response> {
+  const backendBase = getBackendBaseUrl();
+  const targetUrl = `${backendBase}${url.pathname}${url.search}`;
+
+  const forwardHeaders = new Headers();
+  for (const [key, value] of request.headers.entries()) {
+    if (key.toLowerCase() !== "host") {
+      forwardHeaders.set(key, value);
+    }
+  }
+
+  const clientIp = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip");
+  if (clientIp) {
+    forwardHeaders.set("x-forwarded-for", clientIp);
+  }
+
+  const hasBody = !["GET", "HEAD"].includes(request.method.toUpperCase());
+  let body: BodyInit | null = null;
+  if (hasBody) {
+    body = await request.arrayBuffer();
+  }
+
+  try {
+    const backendRes = await fetch(targetUrl, {
+      method: request.method,
+      headers: forwardHeaders,
+      body,
+      redirect: "manual",
+    });
+
+    const responseHeaders = new Headers();
+    for (const [key, value] of backendRes.headers.entries()) {
+      if (key.toLowerCase() === "set-cookie") {
+        continue;
+      }
+      responseHeaders.set(key, value);
+    }
+
+    // Preserve multiple Set-Cookie headers properly
+    if (typeof (backendRes.headers as any).getSetCookie === "function") {
+      const cookies = (backendRes.headers as any).getSetCookie();
+      for (const cookie of cookies) {
+        responseHeaders.append("set-cookie", cookie);
+      }
+    } else {
+      const cookieHeader = backendRes.headers.get("set-cookie");
+      if (cookieHeader) {
+        responseHeaders.set("set-cookie", cookieHeader);
+      }
+    }
+
+    return new Response(backendRes.body, {
+      status: backendRes.status,
+      statusText: backendRes.statusText,
+      headers: responseHeaders,
+    });
+  } catch (err: any) {
+    console.error(`[API Proxy] Error forwarding ${request.method} ${url.pathname} to ${targetUrl}:`, err);
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "BACKEND_UNAVAILABLE",
+          message: `Backend service is unreachable at ${backendBase}. If running on Render free tier, the backend may be booting up from cold sleep (takes ~45s). Please retry in a few moments.`,
+          detail: err?.message || String(err),
+        },
+      }),
+      {
+        status: 502,
+        headers: { "content-type": "application/json; charset=utf-8" },
+      }
+    );
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+
+      if (url.pathname === "/api" || url.pathname.startsWith("/api/")) {
+        return await handleApiProxy(request, url);
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
@@ -59,3 +165,4 @@ export default {
     }
   },
 };
+

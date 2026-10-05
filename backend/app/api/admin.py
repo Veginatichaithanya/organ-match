@@ -82,6 +82,7 @@ def _build_user_list_item(u: User) -> dict:
         "hospital_id": str(u.hospital_id) if u.hospital_id else None,
         "hospital_name": u.hospital.name if u.hospital else None,
         "role": u.roles[0].name if u.roles else None,
+        "roles": [{"id": str(r.id), "name": r.name, "description": r.description} for r in u.roles] if u.roles else [],
         "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
         "created_at": u.created_at.isoformat(),
     }
@@ -161,6 +162,7 @@ async def list_admin_users(
             hospital_id=u.hospital_id,
             hospital_name=u.hospital.name if u.hospital else None,
             role=u.roles[0].name if u.roles else None,
+            roles=[RoleInfo(id=r.id, name=r.name, description=r.description) for r in u.roles] if u.roles else [],
             last_login_at=u.last_login_at,
             created_at=u.created_at,
         )
@@ -580,6 +582,116 @@ async def list_admin_hospitals(
         )
 
     return output
+
+
+@router.post("/hospitals/sync-defaults")
+async def sync_default_indian_hospitals(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Sync and update default hospital entries to premier Indian healthcare institutions.
+    Updates existing generic records and provisions new Indian hospital nodes.
+    """
+    _require_admin(current_user)
+
+    indian_hospitals = [
+        {
+            "id": uuid.UUID("a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0"),
+            "name": "AIIMS New Delhi (All India Institute of Medical Sciences)",
+            "code": "AIIMS-DEL",
+            "location": "New Delhi, Delhi, India",
+            "contact_email": "transplant@aiims.edu.in",
+            "contact_phone": "+91-11-26588500",
+            "address": "Ansari Nagar, New Delhi, Delhi 110029",
+        },
+        {
+            "id": uuid.UUID("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0"),
+            "name": "Apollo Hospitals (Transplant Centre)",
+            "code": "APOLLO-CHE",
+            "location": "Chennai, Tamil Nadu, India",
+            "contact_email": "organtransplant@apollohospitals.com",
+            "contact_phone": "+91-44-28290200",
+            "address": "21 Greams Lane, Thousand Lights, Chennai, Tamil Nadu 600006",
+        },
+        {
+            "id": uuid.UUID("c0c0c0c0-c0c0-c0c0-c0c0-c0c0c0c0c0c0"),
+            "name": "Fortis Memorial Research Institute",
+            "code": "FORTIS-GGN",
+            "location": "Gurugram, Haryana, India",
+            "contact_email": "transplants@fortishealthcare.com",
+            "contact_phone": "+91-124-4962200",
+            "address": "Sector 44, Opposite HUDA City Centre, Gurugram, Haryana 122002",
+        },
+        {
+            "id": uuid.UUID("d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0"),
+            "name": "KIMS Hospitals (Krishna Institute of Medical Sciences)",
+            "code": "KIMS-HYD",
+            "location": "Hyderabad, Telangana, India",
+            "contact_email": "info@kimshospitals.com",
+            "contact_phone": "+91-40-44885000",
+            "address": "1-8-31/1, Minister Road, Krishna Nagar Colony, Begumpet, Secunderabad, Telangana 500003",
+        },
+    ]
+
+    for item in indian_hospitals:
+        hosp = await db.get(Hospital, item["id"])
+        if not hosp:
+            if item["id"] == uuid.UUID("a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0"):
+                hosp = (await db.execute(select(Hospital).where(Hospital.name.ilike("%Hospital A%")))).scalars().first()
+            elif item["id"] == uuid.UUID("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0"):
+                hosp = (await db.execute(select(Hospital).where(Hospital.name.ilike("%Hospital B%")))).scalars().first()
+
+        if hosp:
+            hosp.name = item["name"]
+            hosp.code = item["code"]
+            hosp.location = item["location"]
+            hosp.contact_email = item["contact_email"]
+            hosp.contact_phone = item["contact_phone"]
+            hosp.address = item["address"]
+            hosp.status = "Active"
+        else:
+            new_hosp = Hospital(
+                id=item["id"],
+                name=item["name"],
+                code=item["code"],
+                location=item["location"],
+                contact_email=item["contact_email"],
+                contact_phone=item["contact_phone"],
+                address=item["address"],
+                status="Active",
+            )
+            db.add(new_hosp)
+
+    await db.commit()
+
+    query = select(Hospital).order_by(Hospital.name)
+    result = await db.execute(query)
+    all_hospitals = result.scalars().all()
+
+    output = []
+    for h in all_hospitals:
+        user_count = (
+            await db.execute(select(func.count(User.id)).where(User.hospital_id == h.id))
+        ).scalar() or 0
+        output.append(
+            HospitalDetailResponse(
+                id=h.id,
+                name=h.name,
+                code=h.code,
+                location=h.location,
+                contact_email=h.contact_email,
+                contact_phone=h.contact_phone,
+                address=h.address,
+                status=h.status,
+                user_count=user_count,
+                created_at=h.created_at,
+                updated_at=h.updated_at,
+            )
+        )
+
+    return {"message": "Hospitals successfully synchronized with Indian institutions.", "hospitals": output}
 
 
 @router.post("/hospitals/", status_code=status.HTTP_201_CREATED)

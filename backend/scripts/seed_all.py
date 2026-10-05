@@ -30,6 +30,8 @@ from app.security.authentication import get_password_hash
 
 HOSPITAL_A_ID = uuid.UUID("a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0")
 HOSPITAL_B_ID = uuid.UUID("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0")
+HOSPITAL_C_ID = uuid.UUID("c0c0c0c0-c0c0-c0c0-c0c0-c0c0c0c0c0c0")
+HOSPITAL_D_ID = uuid.UUID("d0d0d0d0-d0d0-d0d0-d0d0-d0d0d0d0d0d0")
 
 PERMISSIONS = [
     "CREATE_DONOR", "VIEW_DONOR", "EDIT_DONOR",
@@ -65,8 +67,10 @@ ROLE_PERMISSIONS = {
 
 def seed_hospitals(session: Session):
     hospitals_data = [
-        {"id": HOSPITAL_A_ID, "name": "Hospital A (General Care)", "location": "New Delhi, India"},
-        {"id": HOSPITAL_B_ID, "name": "Hospital B (Metropolitan)", "location": "Boston, USA"},
+        {"id": HOSPITAL_A_ID, "name": "AIIMS New Delhi (All India Institute of Medical Sciences)", "location": "New Delhi, Delhi, India"},
+        {"id": HOSPITAL_B_ID, "name": "Apollo Hospitals (Transplant Centre)", "location": "Chennai, Tamil Nadu, India"},
+        {"id": HOSPITAL_C_ID, "name": "Fortis Memorial Research Institute", "location": "Gurugram, Haryana, India"},
+        {"id": HOSPITAL_D_ID, "name": "KIMS Hospitals (Krishna Institute of Medical Sciences)", "location": "Hyderabad, Telangana, India"},
     ]
     for data in hospitals_data:
         existing = session.query(Hospital).filter_by(id=data["id"]).first()
@@ -75,7 +79,9 @@ def seed_hospitals(session: Session):
             session.add(hospital)
             print(f"[*] Seeded hospital: {data['name']}")
         else:
-            print(f"[-] Hospital exists: {data['name']}")
+            existing.name = data["name"]
+            existing.location = data["location"]
+            print(f"[*] Updated hospital: {data['name']}")
     session.commit()
 
 def seed_roles_and_permissions(session: Session):

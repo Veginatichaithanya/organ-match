@@ -19,6 +19,7 @@ import { FullScreenLoader } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { http } from "@/services/http";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -45,12 +46,21 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Explicitly reset all form inputs and errors whenever login page mounts
+  // Reset form state on mount and pre-warm backend for cold starts.
+  // Health ping is debounced via sessionStorage to avoid triggering Render's
+  // 429 rate limit on rapid page re-mounts / refreshes.
   useEffect(() => {
     setUsernameOrEmail("");
     setPassword("");
     setErrorMsg(null);
     setLoading(false);
+
+    const PREWARM_KEY = "sods.prewarm_done";
+    const already = window.sessionStorage.getItem(PREWARM_KEY);
+    if (!already) {
+      window.sessionStorage.setItem(PREWARM_KEY, "1");
+      http.get("/health").catch(() => {});
+    }
   }, []);
 
   // If user is already authenticated in active session and ready, navigate to dashboard

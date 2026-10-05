@@ -74,7 +74,7 @@ function AdminRolesPage() {
   // Extract unique sorted permission list from backend
   const permissionMap = new Map<string, string>();
   (roles ?? []).forEach((r) => {
-    r.permissions.forEach((p) => {
+    (r.permissions ?? []).forEach((p) => {
       if (!permissionMap.has(p.name)) {
         permissionMap.set(p.name, p.description || "System operation permission.");
       }
@@ -88,7 +88,7 @@ function AdminRolesPage() {
 
   // Calculate assigned roles for selected permission
   const rolesWithSelectedPerm = selectedPermission
-    ? (roles ?? []).filter((r) => r.permissions.some((p) => p.name === selectedPermission.name))
+    ? (roles ?? []).filter((r) => (r.permissions ?? []).some((p) => p.name === selectedPermission.name))
     : [];
 
   return (
@@ -167,7 +167,7 @@ function AdminRolesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
               {CANONICAL_ROLES.map((cRole) => {
                 const dbRole = roleMap.get(cRole.name);
-                const permCount = dbRole?.permissions.length ?? 0;
+                const permCount = dbRole?.permissions?.length ?? 0;
                 const badgeStyle = ROLE_BADGE_STYLES[cRole.name] || "bg-slate-100 text-slate-700 border-slate-200";
 
                 return (
@@ -356,10 +356,10 @@ function AdminRolesPage() {
           <div className="py-3 space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Assigned Permissions ({selectedRoleObj?.permissions.length ?? 0})
+                Assigned Permissions ({selectedRoleObj?.permissions?.length ?? 0})
               </h4>
               <Badge variant="outline" className="text-xs font-mono">
-                {selectedRoleObj?.permissions.length ?? 0} Total
+                {selectedRoleObj?.permissions?.length ?? 0} Total
               </Badge>
             </div>
 

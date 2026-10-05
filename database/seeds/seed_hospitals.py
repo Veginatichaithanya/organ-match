@@ -23,12 +23,12 @@ HOSPITAL_B_ID = uuid.UUID("b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b0b0b0")
 
 def seed_hospitals(session: Session):
     hospitals_data = [
-        {"id": HOSPITAL_A_ID, "name": "Hospital A (General Care)", "location": "New York, USA"},
-        {"id": HOSPITAL_B_ID, "name": "Hospital B (Metropolitan)", "location": "Boston, USA"},
+        {"id": HOSPITAL_A_ID, "name": "AIIMS New Delhi (All India Institute of Medical Sciences)", "location": "New Delhi, Delhi, India"},
+        {"id": HOSPITAL_B_ID, "name": "Apollo Hospitals (Transplant Centre)", "location": "Chennai, Tamil Nadu, India"},
     ]
 
     for data in hospitals_data:
-        existing = session.query(Hospital).filter_by(name=data["name"]).first()
+        existing = session.query(Hospital).filter_by(id=data["id"]).first()
         if not existing:
             hospital = Hospital(
                 id=data["id"],
@@ -38,7 +38,9 @@ def seed_hospitals(session: Session):
             session.add(hospital)
             print(f"Seeded hospital: {data['name']}")
         else:
-            print(f"Hospital {data['name']} already exists.")
+            existing.name = data["name"]
+            existing.location = data["location"]
+            print(f"Updated hospital: {data['name']}")
     
     session.commit()
 

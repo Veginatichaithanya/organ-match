@@ -843,7 +843,7 @@ function RegisterHarvestedOrganPage() {
               <div className="flex items-start justify-between mt-1">
                 <FieldError msg={errors.clinical_notes} />
                 <span className="text-[11px] text-gray-400 ml-auto">
-                  {form.clinical_notes.length} / 1000
+                  {(form.clinical_notes || "").length} / 1000
                 </span>
               </div>
             </div>
@@ -863,7 +863,7 @@ function RegisterHarvestedOrganPage() {
               />
               <div className="flex justify-end mt-1">
                 <span className="text-[11px] text-gray-400">
-                  {form.additional_notes.length} / 500
+                  {(form.additional_notes || "").length} / 500
                 </span>
               </div>
             </div>

@@ -3,6 +3,7 @@ from datetime import timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
 
@@ -72,9 +73,15 @@ async def login(
     Authenticate user by username or email. Returns JWT access token in JSON body
     and sets HttpOnly cookie for refresh token.
     """
+    cleaned_id = payload.username_or_email.strip()
     query = (
         select(User)
-        .where((User.username == payload.username_or_email) | (User.email == payload.username_or_email))
+        .where(
+            (func.lower(User.username) == cleaned_id.lower())
+            | (func.lower(User.email) == cleaned_id.lower())
+            | (User.username == cleaned_id)
+            | (User.email == cleaned_id)
+        )
         .options(
             selectinload(User.hospital),
             selectinload(User.roles).selectinload(Role.permissions)

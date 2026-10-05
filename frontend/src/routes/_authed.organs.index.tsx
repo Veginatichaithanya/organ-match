@@ -122,7 +122,7 @@ function OrgansPage() {
         <LoadingState label="Loading organs…" />
       ) : error ? (
         <ErrorState message={error instanceof Error ? error.message : "Failed to load organs."} />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState title="No organs found" description="Try adjusting your search or filters." />
       ) : (
         <>

@@ -58,6 +58,7 @@ class UserListItem(BaseModel):
     hospital_id: Optional[uuid.UUID] = None
     hospital_name: Optional[str] = None
     role: Optional[str] = None
+    roles: List[RoleInfo] = []
     last_login_at: Optional[datetime] = None
     created_at: datetime
 

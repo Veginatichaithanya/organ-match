@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import { nitro } from "nitro/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -27,61 +27,51 @@ const customHttpsConfig = hasCustomSsl
 // Enable HTTPS only if explicitly requested (HTTPS=true) with custom certificates or basicSsl
 const enableHttps = process.env.HTTPS === "true";
 
-let nitroBackendTarget = (
-  process.env.BACKEND_URL ||
-  process.env.VITE_BACKEND_URL ||
-  "https://organmatch-backend-rwjz.onrender.com"
-).trim();
-if (nitroBackendTarget) {
-  if (!nitroBackendTarget.includes(".") && !nitroBackendTarget.includes("localhost") && !nitroBackendTarget.startsWith("/")) {
-    nitroBackendTarget = `${nitroBackendTarget}.onrender.com`;
-  }
-  if (!nitroBackendTarget.startsWith("http://") && !nitroBackendTarget.startsWith("https://")) {
-    nitroBackendTarget = `https://${nitroBackendTarget}`;
-  }
-}
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
 
-export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  plugins: [
-    tanstackStart({
-      server: { entry: "server" },
-    }),
-    nitro({
-      routeRules: nitroBackendTarget
-        ? {
-            "/api/**": {
-              proxy: `${nitroBackendTarget.replace(/\/+$/, "")}/api/**`,
-            },
-          }
-        : undefined,
-    }),
-    viteReact(),
-    tailwindcss(),
-    // Use basicSsl plugin only when HTTPS is explicitly enabled and no custom certificate is provided
-    ...(enableHttps && !hasCustomSsl ? [basicSsl()] : []),
-  ],
-  server: {
-    host: "0.0.0.0",
-    allowedHosts: true,
-    https: customHttpsConfig,
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
-        changeOrigin: true,
-        secure: false,
+  return {
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
       },
     },
-  },
-  preview: {
-    host: "0.0.0.0",
-    port: 3000,
-    allowedHosts: true,
-  },
+    plugins: [
+      tanstackStart({
+        server: { entry: "server" },
+      }),
+      nitro({
+        routeRules: {
+          "/assets/**": {
+            headers: {
+              "cache-control": "public, max-age=31536000, immutable",
+            },
+          },
+        },
+      }),
+      viteReact(),
+      tailwindcss(),
+      // Use basicSsl plugin only when HTTPS is explicitly enabled and no custom certificate is provided
+      ...(enableHttps && !hasCustomSsl ? [basicSsl()] : []),
+    ],
+    server: {
+      host: "0.0.0.0",
+      allowedHosts: true,
+      https: customHttpsConfig,
+      port: 5173,
+      proxy: {
+        "/api": {
+          target: env.VITE_BACKEND_URL || process.env.VITE_BACKEND_URL || "http://localhost:8000",
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+    },
+    preview: {
+      host: "0.0.0.0",
+      port: 3000,
+      allowedHosts: true,
+    },
+  };
 });
 

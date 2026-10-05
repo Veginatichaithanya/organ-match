@@ -437,20 +437,26 @@ function AdminTamperingAlertsPage() {
       const status = (tx.verification_status || tx.verification || "").toUpperCase();
       return status === "TAMPERING_DETECTED" || status === "TAMPERED";
     })
-    .map((tx: any) => ({
-      id: tx.id,
-      alertId: tx.fabricTxId ? `ALERT-${tx.fabricTxId.slice(0, 8).toUpperCase()}` : `ALERT-${tx.id.slice(0, 8).toUpperCase()}`,
-      fabricTxId: tx.fabricTxId || tx.fabric_tx_id || tx.id,
-      recordId: tx.recordId || tx.record_id,
-      recordType: tx.recordType || tx.record_type || "Allocation",
-      operation: tx.operation || "ApproveAllocation",
-      actor: tx.actor || null,
-      databaseHash: tx.computed_hash || tx.computedHash || null,
-      fabricHash: tx.payloadHash || tx.fabric_state_hash || tx.fabricStateHash || null,
-      status: "TAMPERING_DETECTED",
-      timestamp: tx.confirmedAt || tx.createdAt || new Date().toISOString(),
-      raw: tx,
-    }));
+    .map((tx: any) => {
+      const fabId = String(tx.fabricTxId || tx.fabric_tx_id || tx.id || "");
+      const recId = String(tx.recordId || tx.record_id || "");
+      return {
+        id: String(tx.id || fabId || Math.random()),
+        alertId: fabId
+          ? `ALERT-${fabId.slice(0, 8).toUpperCase()}`
+          : `ALERT-${String(tx.id || "ALERT").slice(0, 8).toUpperCase()}`,
+        fabricTxId: fabId,
+        recordId: recId,
+        recordType: tx.recordType || tx.record_type || "Allocation",
+        operation: tx.operation || "ApproveAllocation",
+        actor: tx.actor || null,
+        databaseHash: tx.computed_hash || tx.computedHash || null,
+        fabricHash: tx.payloadHash || tx.fabric_state_hash || tx.fabricStateHash || null,
+        status: "TAMPERING_DETECTED",
+        timestamp: tx.confirmedAt || tx.createdAt || new Date().toISOString(),
+        raw: tx,
+      };
+    });
 
   return (
     <div className="p-6 max-w-full space-y-6">
@@ -541,9 +547,9 @@ function AdminTamperingAlertsPage() {
                   </td>
                   <td className="px-2.5 py-2.5 text-gray-900 font-mono text-xs whitespace-nowrap">
                     <span className="font-semibold text-gray-700">{e.recordType}:</span>{" "}
-                    {e.recordId.length > 14
+                    {e.recordId && e.recordId.length > 14
                       ? `${e.recordId.slice(0, 8)}…`
-                      : e.recordId}
+                      : (e.recordId || "—")}
                   </td>
                   <td className="px-2.5 py-2.5 text-gray-800 whitespace-nowrap text-xs font-medium">
                     {e.actor || "—"}

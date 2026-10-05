@@ -42,22 +42,26 @@ async def seed_demo_data():
     """
     async with async_session_maker() as session:
         # 1. Fetch or verify Hospitals
-        hosp_a_q = select(Hospital).where(Hospital.name.ilike("%Hospital A%"))
-        hosp_a_res = await session.execute(hosp_a_q)
-        hosp_a = hosp_a_res.scalars().first()
+        hosp_a_id = uuid.UUID("a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0")
+        hosp_a = await session.get(Hospital, hosp_a_id)
 
         if not hosp_a:
-            # Check by hardcoded ID if exists
-            hosp_a_id = uuid.UUID("a0a0a0a0-a0a0-a0a0-a0a0-a0a0a0a0a0a0")
-            hosp_a = await session.get(Hospital, hosp_a_id)
-            if not hosp_a:
-                hosp_a = Hospital(
-                    id=hosp_a_id,
-                    name="Hospital A (General Care)",
-                    location="New Delhi, India",
-                )
-                session.add(hosp_a)
-                await session.flush()
+            hosp_a_q = select(Hospital).where(Hospital.name.ilike("%AIIMS%") | Hospital.name.ilike("%Hospital A%"))
+            hosp_a_res = await session.execute(hosp_a_q)
+            hosp_a = hosp_a_res.scalars().first()
+
+        if not hosp_a:
+            hosp_a = Hospital(
+                id=hosp_a_id,
+                name="AIIMS New Delhi (All India Institute of Medical Sciences)",
+                location="New Delhi, Delhi, India",
+            )
+            session.add(hosp_a)
+            await session.flush()
+        else:
+            hosp_a.name = "AIIMS New Delhi (All India Institute of Medical Sciences)"
+            hosp_a.location = "New Delhi, Delhi, India"
+            await session.flush()
 
         # 2. Verify Doctor User
         doctor_q = select(User).where(User.username == "doctor").options(selectinload(User.roles))

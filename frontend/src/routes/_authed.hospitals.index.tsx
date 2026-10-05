@@ -73,7 +73,7 @@ function HospitalsPage() {
         <ErrorState
           message={error instanceof Error ? error.message : "Failed to load hospitals."}
         />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState title="No hospitals found" description="Try adjusting your search." />
       ) : (
         <>

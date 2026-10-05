@@ -736,6 +736,8 @@ export const api = {
   ) => http.put(`/admin/hospitals/${id}`, body).then((r) => r.data),
   adminSetHospitalStatus: (id: string, status: string) =>
     http.put(`/admin/hospitals/${id}/status`, { status }).then((r) => r.data),
+  adminSyncIndianHospitals: () =>
+    http.post<{ message: string; hospitals: AdminHospitalDetail[] }>("/admin/hospitals/sync-defaults").then((r) => r.data),
 
   adminGetSettings: () =>
     http.get<AdminSystemSettings>("/admin/settings").then((r) => r.data),

@@ -12,8 +12,10 @@ import {
   Plus,
   ShieldCheck,
   ShieldOff,
+  Sparkles,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 import { api } from "@/services/api";
 import { useAuth } from "@/lib/auth-context";
 import type { AdminHospitalDetail } from "@/services/types";
@@ -249,6 +251,7 @@ function HospitalStatusModal({
 
 function AdminHospitalsPage() {
   const { user, ready } = useAuth();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [editHospital, setEditHospital] = useState<AdminHospitalDetail | null>(null);
@@ -258,6 +261,17 @@ function AdminHospitalsPage() {
     queryKey: ["admin", "hospitals"],
     queryFn: () => api.adminListHospitals(),
     enabled: ready && !!user,
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: () => api.adminSyncIndianHospitals(),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["admin", "hospitals"] });
+      toast.success(data.message || "Hospitals updated to Indian healthcare institutions!");
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.detail || "Failed to sync Indian hospitals.");
+    },
   });
 
   const filtered = (hospitals ?? []).filter((h) => {
@@ -272,17 +286,28 @@ function AdminHospitalsPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Hospital Management</h1>
           <p className="text-sm text-gray-500 mt-1">
             Register and configure verified transplant centers and regional hospitals.
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Register Hospital
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+            className="border-slate-300 hover:bg-slate-50 text-slate-700 shadow-xs"
+          >
+            <Sparkles className="h-4 w-4 mr-2 text-blue-600" />
+            {syncMutation.isPending ? "Syncing..." : "Sync Indian Hospitals"}
+          </Button>
+          <Button onClick={() => setShowCreate(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Register Hospital
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

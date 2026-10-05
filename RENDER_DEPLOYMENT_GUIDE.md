@@ -70,7 +70,7 @@ If you prefer to create each service manually through the Render dashboard:
    | `JWT_SECRET_KEY` | *(generate a random string or click generate)* | Used for auth token signing |
    | `JWT_REFRESH_SECRET_KEY` | *(generate another random string)* | Used for refresh token signing |
 5. Click **"Create Web Service"**.
-6. Once deployed, note your backend URL (e.g. `https://organmatch-backend.onrender.com`).
+6. Once deployed, note your backend URL (e.g. `https://organmatch-backend-xxxx.onrender.com`).
 
 ---
 
@@ -94,7 +94,7 @@ If you prefer to create each service manually through the Render dashboard:
    | Key | Value | Notes |
    |---|---|---|
    | `NODE_ENV` | `production` | Production environment |
-   | `VITE_BACKEND_URL` | `https://organmatch-backend.onrender.com` | Your backend URL from Step 2 |
+   | `BACKEND_URL` | `https://organmatch-backend-xxxx.onrender.com` | Your backend URL from Step 2 (or internal `http://organmatch-backend:10000`) |
 5. Click **"Create Web Service"**.
 6. Render will build and launch your frontend at `https://organmatch-frontend.onrender.com`.
 
@@ -106,13 +106,16 @@ Once both services show **"Live"**:
 
 1. Open your frontend URL: `https://organmatch-frontend.onrender.com`
 2. Navigate to the login page (`/login`).
-3. Sign in using the pre-seeded admin credentials:
-   - **Username**: `admin`
-   - **Password**: `OrganMatch2026!`
+3. Sign in using any of the pre-seeded credentials:
+   - **System Administrator**: `admin` / `OrganMatch2026!`
+   - **Hospital Coordinator**: `hospital` / `OrganMatch2026!`
+   - **Transplant Doctor**: `doctor` / `OrganMatch2026!`
+   - **Allocation Authority**: `transplant` / `OrganMatch2026!`
+   - **Independent Auditor**: `auditor` / `OrganMatch2026!`
 4. Verify:
    - **Admin Dashboard**: Shows active hospitals, donors, and organ statistics.
    - **Matching Engine**: Accessible under Coordinator and Doctor roles.
-   - **API Swagger Docs**: Accessible at `https://organmatch-backend.onrender.com/docs`.
+   - **API Swagger Docs**: Accessible at `https://<your-backend-url>/docs`.
 
 ---
 

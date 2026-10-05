@@ -166,7 +166,7 @@ function AdminOverviewPage() {
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-xs font-medium text-slate-700">
               <Building2 className="h-3.5 w-3.5 text-slate-500" />
-              {user?.organization || "Hospital A (General Care)"}
+              {user?.organization || "AIIMS New Delhi (All India Institute of Medical Sciences)"}
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-[11px] font-medium text-blue-700">
               Admin Portal

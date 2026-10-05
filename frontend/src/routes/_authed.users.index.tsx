@@ -115,7 +115,7 @@ function UsersPage() {
         <LoadingState label="Loading users…" />
       ) : error ? (
         <ErrorState message={error instanceof Error ? error.message : "Failed to load users."} />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState title="No users found" description="Try adjusting your search or filters." />
       ) : (
         <>

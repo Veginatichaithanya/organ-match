@@ -38,6 +38,12 @@ export SEED_USER_PASSWORD="${SEED_USER_PASSWORD:-OrganMatch2026!}"
 export APP_ENV="${APP_ENV:-production}"
 export PORT="${PORT:-80}"
 
+# Adjust Nginx listen port if PORT is custom (e.g. Render PORT=10000)
+if [ -f /etc/nginx/nginx.conf ]; then
+    sed -i "s/listen 80 default_server;/listen ${PORT} default_server;/g" /etc/nginx/nginx.conf
+    sed -i "s/listen \[::\]:80 default_server;/listen [::]:${PORT} default_server;/g" /etc/nginx/nginx.conf
+fi
+
 # Run migrations and database seeding
 echo "[2/4] Applying database migrations..."
 cd /app/backend
@@ -49,7 +55,7 @@ python3 scripts/seed_all.py || echo "[!] Notice: Initial seed routine completed.
 
 echo "[4/4] Starting background supervisor (FastAPI + Frontend + Nginx)..."
 echo "=================================================="
-echo " All services initialized! Launching platform on port 80"
+echo " All services initialized! Launching platform on port ${PORT}"
 echo "=================================================="
 
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

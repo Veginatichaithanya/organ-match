@@ -155,7 +155,7 @@ function RecipientsPage() {
         <ErrorState
           message={error instanceof Error ? error.message : "Failed to load recipients."}
         />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState
           title="No recipients found"
           description="Try adjusting your search or filters."

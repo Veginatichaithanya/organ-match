@@ -21,7 +21,7 @@ port = int(os.getenv("POSTGRES_PORT", "5432"))
 if db_url and "@" in db_url:
     try:
         # Extract host and port from URL
-        netloc = db_url.split("@")[-1].split("/")[0]
+        netloc = db_url.split("@")[-1].split("/")[0].split("?")[0]
         if ":" in netloc:
             host, p = netloc.split(":")
             port = int(p)

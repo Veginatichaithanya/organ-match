@@ -130,7 +130,7 @@ function DonorsPage() {
         <LoadingState label="Loading donors…" />
       ) : error ? (
         <ErrorState message={error instanceof Error ? error.message : "Failed to load donors."} />
-      ) : !data || data.items.length === 0 ? (
+      ) : !data?.items || data.items.length === 0 ? (
         <EmptyState title="No donors found" description="Try adjusting your search or filters." />
       ) : (
         <>
