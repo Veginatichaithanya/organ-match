@@ -101,70 +101,66 @@ async function handleApiProxy(request: Request, url: URL): Promise<Response> {
     body = await request.arrayBuffer();
   }
 
-  try {
-    const backendRes = await fetch(targetUrl, {
-      method: request.method,
-      headers: forwardHeaders,
-      body,
-      redirect: "manual",
-    });
+  // Determine if this request is safe / critical for cold-start retry.
+  // - All GET / HEAD requests are idempotent and safe to retry.
+  // - Auth login / refresh / health endpoints returning 502/503/504 have NOT been executed
+  //   by FastAPI (the 502 comes from the Render edge proxy), so retrying is 100% safe.
+  const isColdStartRetryable =
+    ["GET", "HEAD"].includes(request.method.toUpperCase()) ||
+    ["/api/auth/login", "/api/auth/refresh", "/api/health", "/api/auth/me"].some((p) =>
+      url.pathname.startsWith(p)
+    );
 
-    // Hop-by-hop and encoding/length headers that MUST NOT be forwarded from upstream.
-    // In particular:
-    // - content-encoding: Node fetch() transparently decompresses brotli/gzip responses.
-    // - content-length: upstream was the compressed/chunked size, NOT the decompressed body size.
-    // Forwarding either header causes the browser / CDN to truncate or fail to parse JSON.
-    const STRIP_RESPONSE_HEADERS = new Set([
-      "content-length",
-      "content-encoding",
-      "transfer-encoding",
-      "connection",
-      "keep-alive",
-      "public-key-pins",
-      "upgrade",
-      "trailer",
-      "set-cookie", // Set-Cookie headers are preserved individually below
-    ]);
+  const maxAttempts = isColdStartRetryable ? 6 : 2;
+  let backendRes: Response | null = null;
+  let lastError: any = null;
 
-    const responseHeaders = new Headers();
-    for (const [key, value] of backendRes.headers.entries()) {
-      if (STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      backendRes = await fetch(targetUrl, {
+        method: request.method,
+        headers: forwardHeaders,
+        body,
+        redirect: "manual",
+      });
+
+      // If backend is booting from cold sleep, Render edge router returns 502/503/504.
+      // Retry progressively so the user connection stays open until the backend is up.
+      if ([502, 503, 504].includes(backendRes.status) && attempt < maxAttempts) {
+        const delayMs = Math.min(attempt * 2500, 5000);
+        console.warn(
+          `[API Proxy] Upstream returned HTTP ${backendRes.status} for ${request.method} ${url.pathname} (Render spin-up). Retrying attempt ${attempt}/${maxAttempts} in ${delayMs}ms...`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
         continue;
       }
-      responseHeaders.set(key, value);
-    }
 
-    // Preserve multiple Set-Cookie headers properly
-    if (typeof (backendRes.headers as any).getSetCookie === "function") {
-      const cookies = (backendRes.headers as any).getSetCookie();
-      for (const cookie of cookies) {
-        responseHeaders.append("set-cookie", cookie);
+      break;
+    } catch (err: any) {
+      lastError = err;
+      if (attempt < maxAttempts) {
+        const delayMs = Math.min(attempt * 2500, 5000);
+        console.warn(
+          `[API Proxy] Upstream network error for ${request.method} ${url.pathname} (${err?.message}). Retrying attempt ${attempt}/${maxAttempts} in ${delayMs}ms...`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
       }
-    } else {
-      const cookieHeader = backendRes.headers.get("set-cookie");
-      if (cookieHeader) {
-        responseHeaders.set("set-cookie", cookieHeader);
-      }
+      break;
     }
+  }
 
-    // Safely buffer the body as an ArrayBuffer to avoid stream piping / truncation issues
-    const responseBody = [204, 304].includes(backendRes.status)
-      ? null
-      : await backendRes.arrayBuffer();
-
-    return new Response(responseBody, {
-      status: backendRes.status,
-      statusText: backendRes.statusText,
-      headers: responseHeaders,
-    });
-  } catch (err: any) {
-    console.error(`[API Proxy] Error forwarding ${request.method} ${url.pathname} to ${targetUrl}:`, err);
+  if (!backendRes) {
+    console.error(
+      `[API Proxy] All ${maxAttempts} retry attempts failed forwarding ${request.method} ${url.pathname} to ${targetUrl}:`,
+      lastError
+    );
     return new Response(
       JSON.stringify({
         error: {
           code: "BACKEND_UNAVAILABLE",
           message: `Backend service is unreachable at ${backendBase}. If running on Render free tier, the backend may be booting up from cold sleep (takes ~45s). Please retry in a few moments.`,
-          detail: err?.message || String(err),
+          detail: lastError?.message || String(lastError),
         },
       }),
       {
@@ -173,6 +169,55 @@ async function handleApiProxy(request: Request, url: URL): Promise<Response> {
       }
     );
   }
+
+  // Hop-by-hop and encoding/length headers that MUST NOT be forwarded from upstream.
+  // In particular:
+  // - content-encoding: Node fetch() transparently decompresses brotli/gzip responses.
+  // - content-length: upstream was the compressed/chunked size, NOT the decompressed body size.
+  // Forwarding either header causes the browser / CDN to truncate or fail to parse JSON.
+  const STRIP_RESPONSE_HEADERS = new Set([
+    "content-length",
+    "content-encoding",
+    "transfer-encoding",
+    "connection",
+    "keep-alive",
+    "public-key-pins",
+    "upgrade",
+    "trailer",
+    "set-cookie", // Set-Cookie headers are preserved individually below
+  ]);
+
+  const responseHeaders = new Headers();
+  for (const [key, value] of backendRes.headers.entries()) {
+    if (STRIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+      continue;
+    }
+    responseHeaders.set(key, value);
+  }
+
+  // Preserve multiple Set-Cookie headers properly
+  if (typeof (backendRes.headers as any).getSetCookie === "function") {
+    const cookies = (backendRes.headers as any).getSetCookie();
+    for (const cookie of cookies) {
+      responseHeaders.append("set-cookie", cookie);
+    }
+  } else {
+    const cookieHeader = backendRes.headers.get("set-cookie");
+    if (cookieHeader) {
+      responseHeaders.set("set-cookie", cookieHeader);
+    }
+  }
+
+  // Safely buffer the body as an ArrayBuffer to avoid stream piping / truncation issues
+  const responseBody = [204, 304].includes(backendRes.status)
+    ? null
+    : await backendRes.arrayBuffer();
+
+  return new Response(responseBody, {
+    status: backendRes.status,
+    statusText: backendRes.statusText,
+    headers: responseHeaders,
+  });
 }
 
 export default {

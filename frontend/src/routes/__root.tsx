@@ -157,6 +157,14 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    // Keep backend warm while user is actively browsing (Render free tier stays awake)
+    const interval = setInterval(() => {
+      fetch("/api/health").catch(() => {});
+    }, 8 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Blocks,
   CheckCircle2,
@@ -44,24 +44,29 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Reset form state on mount and pre-warm backend for cold starts.
-  // Health ping is debounced via sessionStorage to avoid triggering Render's
-  // 429 rate limit on rapid page re-mounts / refreshes.
+  // Proactively ping the backend health endpoint so it wakes up from Render
+  // free-tier cold sleep while the user is typing credentials.
+  const triggerPrewarm = useCallback(() => {
+    const PREWARM_KEY = "sods.prewarm_ts";
+    const last = parseInt(window.sessionStorage.getItem(PREWARM_KEY) || "0", 10);
+    // Ping every 3 minutes if active
+    if (Date.now() - last > 3 * 60 * 1000) {
+      window.sessionStorage.setItem(PREWARM_KEY, String(Date.now()));
+      fetch("/api/health").catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     setUsernameOrEmail("");
     setPassword("");
     setErrorMsg(null);
     setLoading(false);
-
-    const PREWARM_KEY = "sods.prewarm_done";
-    const already = window.sessionStorage.getItem(PREWARM_KEY);
-    if (!already) {
-      window.sessionStorage.setItem(PREWARM_KEY, "1");
-      http.get("/health").catch(() => {});
-    }
-  }, []);
+    setIsWakingUp(false);
+    triggerPrewarm();
+  }, [triggerPrewarm]);
 
   // If user is already authenticated in active session and ready, navigate to dashboard
   if (ready && user) {
@@ -71,6 +76,14 @@ function LoginPage() {
   const doLogin = async (uname: string, pass: string) => {
     setLoading(true);
     setErrorMsg(null);
+    setIsWakingUp(false);
+
+    // If request takes longer than 2.5s, backend is waking up from Render free-tier cold sleep.
+    // Display an informative reassurance banner rather than leaving the user uncertain.
+    const wakeTimer = setTimeout(() => {
+      setIsWakingUp(true);
+    }, 2500);
+
     try {
       const loggedUser = await login(uname, pass);
       toast.success(`Welcome back, ${loggedUser.name}!`);
@@ -81,6 +94,8 @@ function LoginPage() {
       setErrorMsg(msg);
       toast.error(msg);
     } finally {
+      clearTimeout(wakeTimer);
+      setIsWakingUp(false);
       setLoading(false);
     }
   };
@@ -207,6 +222,7 @@ function LoginPage() {
                   placeholder="Username or email address"
                   value={usernameOrEmail}
                   onChange={(e) => setUsernameOrEmail(e.target.value)}
+                  onFocus={triggerPrewarm}
                   className="pl-10 h-11 bg-slate-950/80 border-slate-700/80 text-white placeholder:text-slate-500 text-sm focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"
                   disabled={loading}
                   autoComplete="off"
@@ -229,6 +245,7 @@ function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onFocus={triggerPrewarm}
                   className="pl-10 pr-10 h-11 bg-slate-950/80 border-slate-700/80 text-white placeholder:text-slate-500 text-sm focus:border-primary focus:ring-1 focus:ring-primary rounded-xl"
                   disabled={loading}
                   autoComplete="new-password"
@@ -259,6 +276,13 @@ function LoginPage() {
                 </>
               )}
             </Button>
+
+            {isWakingUp && (
+              <div className="rounded-xl bg-blue-950/60 border border-blue-800/60 p-3 text-xs text-blue-300 flex items-center gap-2.5 animate-pulse">
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-blue-400" />
+                <span>Cloud server is spinning up from sleep (Render free tier). Connecting in a few moments...</span>
+              </div>
+            )}
           </form>
         </div>
       </div>

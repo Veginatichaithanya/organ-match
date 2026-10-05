@@ -1,0 +1,17 @@
+name: Keepalive Render Backend Free Tier
+
+on:
+  schedule:
+    # Run every 12 minutes to prevent Render free-tier hibernation (which occurs after 15 mins)
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          echo "Pinging OrganMatch backend health..."
+          curl -s -f -m 45 https://organmatch-backend-rwjz.onrender.com/health || echo "Backend ping attempted"

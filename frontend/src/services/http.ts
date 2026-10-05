@@ -93,15 +93,22 @@ http.interceptors.response.use(
       );
     }
 
-    // Automatic transparent retry on 502/503/504 gateway spin-up delays (e.g. Render free tier cold start)
-    if (
-      (error.response?.status === 502 || error.response?.status === 503 || error.response?.status === 504) &&
-      originalRequest &&
-      !originalRequest._gatewayRetry
-    ) {
-      originalRequest._gatewayRetry = true;
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      return http(originalRequest);
+    // Automatic transparent multi-attempt retry on 502/503/504 gateway spin-up delays (Render free tier cold start)
+    const isGatewaySpinUp =
+      error.response?.status === 502 ||
+      error.response?.status === 503 ||
+      error.response?.status === 504 ||
+      error.code === "ECONNABORTED";
+
+    if (isGatewaySpinUp && originalRequest) {
+      const currentAttempt = ((originalRequest as any)._gatewayRetryCount || 0) + 1;
+      (originalRequest as any)._gatewayRetryCount = currentAttempt;
+
+      if (currentAttempt <= 4) {
+        const delayMs = Math.min(currentAttempt * 2500, 6000);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return http(originalRequest);
+      }
     }
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
